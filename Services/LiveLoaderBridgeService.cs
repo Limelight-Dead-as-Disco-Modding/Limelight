@@ -66,7 +66,13 @@ namespace Limelight.Services
     local defaultBodyCosmeticPath =
         "/Game/Pagoda/Cosmetics/Charlie/BodyType/PlayerCosmetic_Charlie_BodyType_Default.PlayerCosmetic_Charlie_BodyType_Default"
     local activeCustomMeshApplied = false
-    local characterLoaderActorId = 35005383
+    -- I prefer Limelight's loader while keeping the original actor ID as a
+    -- fallback for people who already installed it.
+    local characterLoaderActorIds =
+    {
+        26082401,
+        35005383
+    }
     local registeredCharacterSlotDefinitions = {}
     local characterSlotCataloguePath =
         runtimeDirectory .. "\\character-slot-catalogue.txt"
@@ -1346,33 +1352,39 @@ namespace Limelight.Services
 
         if actors == nil then
             return nil,
-                "Character Loader's ModActor_C is missing. Install the official Logic Mod and restart Dead as Disco."
+                "Character Loader's ModActor_C is missing. Launch through Limelight once, then restart Dead as Disco."
         end
 
         for _,
-            actor in ipairs(actors) do
+            targetActorId in ipairs(characterLoaderActorIds) do
 
-            if actor ~= nil and
-               actor:IsValid() then
+            for _,
+                actor in ipairs(actors) do
 
-                local idReadSucceeded,
-                      actorId =
-                    pcall(function()
-                        return actor.ActorID
-                    end)
+                if actor ~= nil and
+                   actor:IsValid() then
 
-                if idReadSucceeded and
-                   actorId == characterLoaderActorId then
+                    local idReadSucceeded,
+                          actorId =
+                        pcall(function()
+                            return actor.ActorID
+                        end)
 
-                    return actor,
-                        "Character Loader is ready."
+                    if idReadSucceeded and
+                       actorId == targetActorId then
+
+                        return actor,
+                            "Character Loader is ready."
+                    end
                 end
             end
         end
 
         return nil,
-            "Character Loader's actor is not ready yet. Its ID should be " ..
-            tostring(characterLoaderActorId) .. "."
+            "Character Loader's actor is not ready yet. Expected Limelight ID " ..
+            tostring(characterLoaderActorIds[1]) ..
+            " or legacy ID " ..
+            tostring(characterLoaderActorIds[2]) .. "."
     end
 
     local function findCosmeticSubsystem()

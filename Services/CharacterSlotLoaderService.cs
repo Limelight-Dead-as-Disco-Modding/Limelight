@@ -1,4 +1,6 @@
 using System.IO;
+using System.Reflection;
+using System.Security.Cryptography;
 using Limelight.Models;
 
 namespace Limelight.Services
@@ -22,12 +24,30 @@ namespace Limelight.Services
         public const string RuntimeModeFilename =
             "character-slot-loader-mode.txt";
 
-        private static readonly string[] RequiredFiles =
+        private static readonly (
+            string FileName,
+            string ResourceName)[] ManagedPayloads =
+        {
+            (
+                "LimelightCharacterLoader.pak",
+                "Limelight.Payloads.CharacterLoader.LimelightCharacterLoader.pak"),
+            (
+                "LimelightCharacterLoader.utoc",
+                "Limelight.Payloads.CharacterLoader.LimelightCharacterLoader.utoc"),
+            (
+                "LimelightCharacterLoader.ucas",
+                "Limelight.Payloads.CharacterLoader.LimelightCharacterLoader.ucas")
+        };
+
+        private static readonly string[] LegacyRequiredFiles =
         {
             "CharacterLoader.pak",
             "CharacterLoader.utoc",
             "CharacterLoader.ucas"
         };
+
+        private readonly Assembly _assembly =
+            typeof(CharacterSlotLoaderService).Assembly;
 
         public CharacterSlotLoaderStatus Inspect(
             string gameDirectory)
@@ -40,20 +60,32 @@ namespace Limelight.Services
                     "Paks",
                     "LogicMods");
 
-            // I leave the official loader in its author's hands. Limelight only
-            // checks that all three travelling companions arrived together.
             List<string> missingFiles =
-                RequiredFiles
-                    .Where(fileName =>
-                        !File.Exists(
+                ManagedPayloads
+                    .Where(payload =>
+                        !FileMatchesEmbeddedPayload(
                             Path.Combine(
                                 logicModsDirectory,
-                                fileName)))
+                                payload.FileName),
+                            payload.ResourceName))
+                    .Select(payload =>
+                        payload.FileName)
                     .ToList();
+
+            bool legacyLoaderInstalled =
+                LegacyRequiredFiles.All(fileName =>
+                    File.Exists(
+                        Path.Combine(
+                            logicModsDirectory,
+                            fileName)));
 
             return new CharacterSlotLoaderStatus
             {
-                IsInstalled = missingFiles.Count == 0,
+                // I keep the original loader working for existing installs,
+                // while new setups receive Limelight's checked payload.
+                IsInstalled =
+                    missingFiles.Count == 0 ||
+                    legacyLoaderInstalled,
                 LogicModsDirectory = logicModsDirectory,
                 MissingFiles = missingFiles
             };
@@ -70,12 +102,23 @@ namespace Limelight.Services
                 return;
             }
 
-            throw new InvalidOperationException(
-                "Character Slot mods need the official Character Loader Logic Mod. " +
-                "Install CharacterLoader.pak, CharacterLoader.utoc, and " +
-                "CharacterLoader.ucas in Pagoda\\Content\\Paks\\LogicMods, " +
-                "then restart Dead as Disco. Missing: " +
-                string.Join(", ", status.MissingFiles));
+            Directory.CreateDirectory(
+                status.LogicModsDirectory);
+
+            foreach ((string fileName, string resourceName) in
+                     ManagedPayloads)
+            {
+                InstallPayload(
+                    status.LogicModsDirectory,
+                    fileName,
+                    resourceName);
+            }
+
+            if (!Inspect(gameDirectory).IsInstalled)
+            {
+                throw new InvalidOperationException(
+                    "Limelight could not verify its Character Loader Logic Mod after installation.");
+            }
         }
 
         public void SynchronizeRuntimeCatalogue(
@@ -105,8 +148,13 @@ namespace Limelight.Services
                         StringComparer.OrdinalIgnoreCase)
                     .OrderBy(path =>
                         path,
-                        StringComparer.OrdinalIgnoreCase)
+                    StringComparer.OrdinalIgnoreCase)
                     .ToList();
+
+            if (definitionPaths.Count > 0)
+            {
+                EnsureInstalled(gameDirectory);
+            }
 
             WriteAllLinesAtomically(
                 Path.Combine(
@@ -123,6 +171,110 @@ namespace Limelight.Services
                 HasEnabledOfficialLuaLoader(gameDirectory)
                     ? "official"
                     : "limelight");
+        }
+
+        private void InstallPayload(
+            string logicModsDirectory,
+            string fileName,
+            string resourceName)
+        {
+            string targetPath =
+                Path.Combine(
+                    logicModsDirectory,
+                    fileName);
+
+            if (FileMatchesEmbeddedPayload(
+                    targetPath,
+                    resourceName))
+            {
+                return;
+            }
+
+            string temporaryPath =
+                targetPath +
+                ".limelight-installing";
+
+            try
+            {
+                using Stream source =
+                    OpenPayloadResource(resourceName);
+
+                using (FileStream destination =
+                    new(
+                        temporaryPath,
+                        FileMode.Create,
+                        FileAccess.Write,
+                        FileShare.None))
+                {
+                    source.CopyTo(destination);
+                }
+
+                // I verify each travelling companion before it can replace a
+                // working loader file.
+                if (!FileMatchesEmbeddedPayload(
+                        temporaryPath,
+                        resourceName))
+                {
+                    throw new InvalidOperationException(
+                        $"The embedded {fileName} payload failed its integrity check.");
+                }
+
+                File.Move(
+                    temporaryPath,
+                    targetPath,
+                    overwrite: true);
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(temporaryPath))
+                    {
+                        File.Delete(temporaryPath);
+                    }
+                }
+                catch
+                {
+                    // I leave temporary cleanup best-effort because the
+                    // verified Logic Mod files are what matter.
+                }
+            }
+        }
+
+        private bool FileMatchesEmbeddedPayload(
+            string filePath,
+            string resourceName)
+        {
+            if (!File.Exists(filePath))
+            {
+                return false;
+            }
+
+            using Stream embeddedPayload =
+                OpenPayloadResource(resourceName);
+
+            FileInfo installedFile =
+                new(filePath);
+
+            if (installedFile.Length != embeddedPayload.Length)
+            {
+                return false;
+            }
+
+            using FileStream installedPayload =
+                File.OpenRead(filePath);
+
+            return SHA256.HashData(embeddedPayload)
+                .SequenceEqual(
+                    SHA256.HashData(installedPayload));
+        }
+
+        private Stream OpenPayloadResource(
+            string resourceName)
+        {
+            return _assembly.GetManifestResourceStream(resourceName) ??
+                throw new InvalidOperationException(
+                    $"The embedded Character Loader resource {resourceName} could not be found.");
         }
 
         private static bool HasEnabledOfficialLuaLoader(

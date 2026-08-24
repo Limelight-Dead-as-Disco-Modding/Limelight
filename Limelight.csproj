@@ -70,4 +70,14 @@
     <EmbeddedResource Include="Payloads\Stagehand\LimelightStagehand.zip" LogicalName="Limelight.Payloads.Stagehand.LimelightStagehand.zip" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Payloads\CharacterLoader\LimelightCharacterLoader.pak" />
+    <None Remove="Payloads\CharacterLoader\LimelightCharacterLoader.utoc" />
+    <None Remove="Payloads\CharacterLoader\LimelightCharacterLoader.ucas" />
+
+    <EmbeddedResource Include="Payloads\CharacterLoader\LimelightCharacterLoader.pak" LogicalName="Limelight.Payloads.CharacterLoader.LimelightCharacterLoader.pak" />
+    <EmbeddedResource Include="Payloads\CharacterLoader\LimelightCharacterLoader.utoc" LogicalName="Limelight.Payloads.CharacterLoader.LimelightCharacterLoader.utoc" />
+    <EmbeddedResource Include="Payloads\CharacterLoader\LimelightCharacterLoader.ucas" LogicalName="Limelight.Payloads.CharacterLoader.LimelightCharacterLoader.ucas" />
+  </ItemGroup>
+
 </Project>
