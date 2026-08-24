@@ -33,17 +33,20 @@ namespace Limelight.Services
         private readonly DeadAsDiscoUe4ssConfigurationService _ue4ssConfigurationService;
         private readonly LiveLoaderBridgeService _liveLoaderBridgeService;
         private readonly NativeBridgeInstallerService _nativeBridgeInstallerService;
+        private readonly StagehandPayloadService _stagehandPayloadService;
 
         public CompatibilityService(
             Ue4ssDetectionService ue4ssDetectionService,
             DeadAsDiscoUe4ssConfigurationService ue4ssConfigurationService,
             LiveLoaderBridgeService liveLoaderBridgeService,
-            NativeBridgeInstallerService nativeBridgeInstallerService)
+            NativeBridgeInstallerService nativeBridgeInstallerService,
+            StagehandPayloadService stagehandPayloadService)
         {
             _ue4ssDetectionService = ue4ssDetectionService;
             _ue4ssConfigurationService = ue4ssConfigurationService;
             _liveLoaderBridgeService = liveLoaderBridgeService;
             _nativeBridgeInstallerService = nativeBridgeInstallerService;
+            _stagehandPayloadService = stagehandPayloadService;
         }
 
         public LocalCompatibilityResult Check(
@@ -122,7 +125,9 @@ namespace Limelight.Services
                         SupportedNativeBridgeVersion,
                         StringComparison.OrdinalIgnoreCase) &&
                     SafeCheck(() =>
-                        _nativeBridgeInstallerService.IsEmbeddedPayloadCompatible()),
+                        _nativeBridgeInstallerService.IsEmbeddedPayloadCompatible()) &&
+                    SafeCheck(() =>
+                        _stagehandPayloadService.IsEmbeddedPayloadCompatible()),
                 Ue4ssInstalled = loader.IsInstalled,
                 Ue4ssCompatible =
                     SafeCheck(() =>
@@ -135,7 +140,10 @@ namespace Limelight.Services
                         _liveLoaderBridgeService.IsInstalled(loader)),
                 NativeBridgeCurrent =
                     SafeCheck(() =>
-                        _nativeBridgeInstallerService.IsCurrentVersionInstalled(loader))
+                        _nativeBridgeInstallerService.IsCurrentVersionInstalled(loader)),
+                StagehandCurrent =
+                    SafeCheck(() =>
+                        _stagehandPayloadService.IsCurrentVersionInstalled(loader))
             };
         }
 

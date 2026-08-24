@@ -420,6 +420,27 @@
                             </StackPanel>
                         </Border>
 
+                        <Border x:Name="StagehandScriptsNavigation"
+                                Style="{StaticResource SidebarNavigationItemStyle}"
+                                Margin="8,3"
+                                Background="Transparent"
+                                CornerRadius="8"
+                                BorderBrush="Transparent"
+                                BorderThickness="3,0,0,0"
+                                MouseLeftButtonDown="ShowStagehandScripts_Click"
+                                MouseEnter="Navigation_MouseEnter"
+                                MouseLeave="Navigation_MouseLeave"
+                                Cursor="Hand">
+                            <StackPanel Margin="16,13" Orientation="Horizontal">
+                                <TextBlock x:Name="StagehandScriptsNavigationIcon"
+                                           Text="◇" Width="26" FontSize="13"
+                                           Foreground="{StaticResource MutedTextBrush}"/>
+                                <TextBlock x:Name="StagehandScriptsNavigationText"
+                                           Text="Stagehand Scripts" FontSize="14"
+                                           Foreground="{StaticResource MutedTextBrush}"/>
+                            </StackPanel>
+                        </Border>
+
                         <Border x:Name="ProfilesNavigation"
                             Style="{StaticResource SidebarNavigationItemStyle}"
                             Margin="8,3"
@@ -966,7 +987,12 @@
             <views:MyModsPage x:Name="MyModsPageControl"
                           Style="{StaticResource PageTransitionStyle}"
                           Grid.Column="1"
-                          Visibility="Collapsed"/>
+                           Visibility="Collapsed"/>
+
+            <views:StagehandScriptsPage x:Name="StagehandScriptsPageControl"
+                                        Style="{StaticResource PageTransitionStyle}"
+                                        Grid.Column="1"
+                                        Visibility="Collapsed"/>
 
             <!-- Profiles keep reusable casts separate from the active mod and X19 rotation. -->
             <views:ProfilesPage x:Name="ProfilesPageControl"

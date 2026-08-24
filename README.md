@@ -170,6 +170,20 @@ Limelight does not expose a personal API key in diagnostic reports. Public build
 
 Please do not include personal API credentials, private files, or unrelated crash data in a public report.
 
+## Roadmap
+
+Future Limelight architecture is being designed around three connected ideas:
+**Passport** describes a mod, **Patchwatch** evaluates it after game updates,
+and **Handshake** compares it between multiplayer peers. These are planned as
+shared infrastructure behind current reliability and release work, not as
+separate apps or promises of unsafe automatic repair.
+
+**Tag Team** is a later rhythm-gameplay experiment built on X19 rosters, the
+safe Live Loader activation path and bounded Stagehand scoring and effects. It
+will remain behind current Live Loader and Stagehand reliability work.
+
+Read the full [Limelight architecture and roadmap](ROADMAP.md).
+
 ## Credits
 
 Created by **Henreh**.

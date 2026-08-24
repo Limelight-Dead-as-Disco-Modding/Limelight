@@ -62,4 +62,12 @@
     <EmbeddedResource Include="Payloads\UE4SS\UE4SS.dll" LogicalName="Limelight.Payloads.UE4SS.UE4SS.dll" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Payloads\Stagehand\stagehand-payload-manifest.json" />
+    <None Remove="Payloads\Stagehand\LimelightStagehand.zip" />
+
+    <EmbeddedResource Include="Payloads\Stagehand\stagehand-payload-manifest.json" LogicalName="Limelight.Payloads.Stagehand.stagehand-payload-manifest.json" />
+    <EmbeddedResource Include="Payloads\Stagehand\LimelightStagehand.zip" LogicalName="Limelight.Payloads.Stagehand.LimelightStagehand.zip" />
+  </ItemGroup>
+
 </Project>

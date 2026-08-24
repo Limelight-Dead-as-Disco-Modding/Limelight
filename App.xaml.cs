@@ -61,6 +61,7 @@ namespace Limelight
                     ShutdownMode.OnMainWindowClose;
 
                 mainWindow.Show();
+                await mainWindow.HandleStartupArgumentsAsync(e.Args);
             }
             catch (Exception exception)
             {

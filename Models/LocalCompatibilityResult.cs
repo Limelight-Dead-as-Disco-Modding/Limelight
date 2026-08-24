@@ -50,6 +50,8 @@ namespace Limelight.Models
 
         public bool NativeBridgeCurrent { get; init; }
 
+        public bool StagehandCurrent { get; init; }
+
         public bool IsLiveLoaderCompatible =>
             GameConnected &&
             EmbeddedPayloadCompatible &&
@@ -57,7 +59,8 @@ namespace Limelight.Models
             Ue4ssCompatible &&
             Ue4ssConfigured &&
             LuaBridgeInstalled &&
-            NativeBridgeCurrent;
+            NativeBridgeCurrent &&
+            StagehandCurrent;
 
         public string DetectedGameLabel
         {
@@ -128,7 +131,7 @@ namespace Limelight.Models
 
                 if (!EmbeddedPayloadCompatible)
                 {
-                    return "This Limelight build contains an invalid or incompatible native bridge payload.";
+                    return "This Limelight build contains an invalid or incompatible managed runtime payload.";
                 }
 
                 if (!Ue4ssInstalled)
@@ -154,6 +157,11 @@ namespace Limelight.Models
                 if (!NativeBridgeCurrent)
                 {
                     return "The installed native bridge is missing or does not match this Limelight build.";
+                }
+
+                if (!StagehandCurrent)
+                {
+                    return "Limelight's managed gameplay-logic runtime is missing or out of date.";
                 }
 
                 return "Limelight's Live Loader is ready for this Dead as Disco update.";

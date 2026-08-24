@@ -48,6 +48,7 @@ namespace Limelight
         {
             Dashboard,
             MyMods,
+            StagehandScripts,
             Profiles,
             LiveLoaders,
             Multiplayer,
@@ -107,6 +108,8 @@ namespace Limelight
         private readonly LiveModStagingService _liveModStagingService;
         private readonly LiveSessionService _liveSessionService;
         private readonly NativeBridgeInstallerService _nativeBridgeInstallerService;
+        private readonly StagehandPayloadService _stagehandPayloadService;
+        private readonly StagehandLogicModPackageService _stagehandLogicModPackageService;
         private readonly LimelightMpPayloadService _multiplayerPayloadService;
         private readonly LimelightMpRelayService _multiplayerRelayService;
         private readonly LimelightMpFriendCodeService _multiplayerFriendCodeService;
@@ -227,6 +230,12 @@ namespace Limelight
             _nativeBridgeInstallerService =
                 new NativeBridgeInstallerService();
 
+            _stagehandPayloadService =
+                new StagehandPayloadService();
+
+            _stagehandLogicModPackageService =
+                new StagehandLogicModPackageService();
+
             _multiplayerPayloadService =
                 new LimelightMpPayloadService();
 
@@ -250,7 +259,8 @@ namespace Limelight
                     _ue4ssDetectionService,
                     _ue4ssConfigurationService,
                     _liveLoaderBridgeService,
-                    _nativeBridgeInstallerService);
+                    _nativeBridgeInstallerService,
+                    _stagehandPayloadService);
 
             _liveLoaderCommandService =
                 new LiveLoaderCommandService();
@@ -344,6 +354,18 @@ namespace Limelight
 
             MyModsPageControl.RenameModRequested +=
                 RenameModRequested;
+
+            StagehandScriptsPageControl.RefreshRequested +=
+                RefreshStagehandScriptsPage;
+
+            StagehandScriptsPageControl.UpdateRuntimeRequested +=
+                UpdateStagehandRuntimeRequested;
+
+            StagehandScriptsPageControl.SetEnabledRequested +=
+                SetStagehandScriptEnabledRequested;
+
+            StagehandScriptsPageControl.RemoveRequested +=
+                RemoveStagehandScriptRequested;
 
             ProfilesPageControl.ProfilesChanged +=
                 ProfilesChanged;
@@ -478,6 +500,11 @@ namespace Limelight
                 await Task.Run(() =>
                     _liveSessionService.RecoverClosedGame(
                         gameDirectory));
+
+                // I prepare the persistent cast before network work or startup
+                // prompts can give a direct Steam launch time to overtake it.
+                // The later pass still collects mods imported during migration.
+                await ApplyPendingDeploymentIfPossible();
             }
 
             RefreshSettingsPage();
@@ -1870,6 +1897,8 @@ namespace Limelight
                 _liveLoaderBridgeService.IsInstalled(
                     installation) &&
                 _nativeBridgeInstallerService.IsCurrentVersionInstalled(
+                    installation) &&
+                _stagehandPayloadService.IsCurrentVersionInstalled(
                     installation);
 
             if (_isMultiplayerPayloadValid is null)
@@ -1964,6 +1993,8 @@ namespace Limelight
                 !_liveLoaderBridgeService.IsInstalled(
                     installation) ||
                 !_nativeBridgeInstallerService.IsCurrentVersionInstalled(
+                    installation) ||
+                !_stagehandPayloadService.IsCurrentVersionInstalled(
                     installation))
             {
                 ShowLimelightDialog(
@@ -2243,6 +2274,8 @@ namespace Limelight
     !_ue4ssConfigurationService.IsConfigured(loader) ||
     !_liveLoaderBridgeService.IsInstalled(loader) ||
     !_nativeBridgeInstallerService.IsCurrentVersionInstalled(
+        loader) ||
+    !_stagehandPayloadService.IsCurrentVersionInstalled(
         loader))
             {
                 // The optional loader has not been accepted yet. The normal
@@ -2622,6 +2655,17 @@ namespace Limelight
                 return;
             }
 
+            if (!_stagehandPayloadService.IsCurrentVersionInstalled(
+                    loader))
+            {
+                SetLiveLoaderDisplay(
+                    "LOGIC RUNTIME NEEDED",
+                    "Limelight's managed gameplay-logic runtime is missing or out of date. Use Repair Live Loader in Settings.",
+                    isHealthy: false);
+
+                return;
+            }
+
             if (!isGameRunning)
             {
                 SetLiveLoaderDisplay(
@@ -2872,6 +2916,7 @@ namespace Limelight
                 $"ue4ssConfigured={compatibility.Ue4ssConfigured}; " +
                 $"luaBridge={compatibility.LuaBridgeInstalled}; " +
                 $"nativeBridge={compatibility.NativeBridgeCurrent}; " +
+                $"stagehand={compatibility.StagehandCurrent}; " +
                 $"detail={compatibility.Detail}");
 
             Ue4ssDetectionResult currentInstallation =
@@ -2900,7 +2945,10 @@ namespace Limelight
                         currentInstallation);
 
                     _nativeBridgeInstallerService.EnsureInstalled(
-    currentInstallation);
+                        currentInstallation);
+
+                    _stagehandPayloadService.EnsureInstalled(
+                        currentInstallation);
                 }
                 catch
                 {
@@ -2915,6 +2963,8 @@ namespace Limelight
      _liveLoaderBridgeService.IsInstalled(
          currentInstallation) &&
      _nativeBridgeInstallerService.IsCurrentVersionInstalled(
+         currentInstallation) &&
+     _stagehandPayloadService.IsCurrentVersionInstalled(
          currentInstallation))
             {
                 if (!isGameRunning)
@@ -3078,11 +3128,21 @@ namespace Limelight
                 _nativeBridgeInstallerService.EnsureInstalled(
                     installedLoader);
 
+                _stagehandPayloadService.EnsureInstalled(
+                    installedLoader);
+
                 if (!_nativeBridgeInstallerService.IsCurrentVersionInstalled(
                         installedLoader))
                 {
                     throw new InvalidOperationException(
                         "The Limelight native bridge could not be verified.");
+                }
+
+                if (!_stagehandPayloadService.IsCurrentVersionInstalled(
+                        installedLoader))
+                {
+                    throw new InvalidOperationException(
+                        "The Limelight Stagehand runtime could not be verified.");
                 }
 
                 _settings.DismissedLiveLoaderPromptForGameDirectory =
@@ -5904,6 +5964,195 @@ namespace Limelight
             SetSelectedNavigation(showMyMods: true);
         }
 
+        private void ShowStagehandScripts_Click(
+            object sender,
+            MouseButtonEventArgs e)
+        {
+            ShowStagehandScriptsPage();
+        }
+
+        private void ShowStagehandScriptsPage()
+        {
+            DashboardPage.Visibility = Visibility.Collapsed;
+            MyModsPageControl.Visibility = Visibility.Collapsed;
+            ProfilesPageControl.Visibility = Visibility.Collapsed;
+            LiveLoadersPageControl.Visibility = Visibility.Collapsed;
+            MultiplayerPageControl.Visibility = Visibility.Collapsed;
+            BrowseNexusPageControl.Visibility = Visibility.Collapsed;
+            DownloadsPageControl.Visibility = Visibility.Collapsed;
+            SettingsPageControl.Visibility = Visibility.Collapsed;
+
+            _selectedNavigationPage = NavigationPage.StagehandScripts;
+            RefreshStagehandScriptsPage();
+            ApplyNavigationAppearance();
+            RefreshDiscordPresence();
+        }
+
+        private void RefreshStagehandScriptsPage()
+        {
+            if (string.IsNullOrWhiteSpace(_gameDirectory))
+            {
+                StagehandScriptsPageControl.ShowScripts(
+                    Array.Empty<InstalledStagehandScript>());
+                return;
+            }
+
+            Ue4ssDetectionResult loader = _ue4ssDetectionService.Detect(_gameDirectory);
+            StagehandScriptsPageControl.ShowScripts(
+                _stagehandLogicModPackageService.ListInstalled(loader),
+                _stagehandPayloadService.ReadRuntimeHealthSummary(loader));
+        }
+
+        private void UpdateStagehandRuntimeRequested()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_gameDirectory))
+                {
+                    throw new InvalidOperationException(
+                        "Connect Dead as Disco before updating Stagehand.");
+                }
+                if (_gameProcessService.IsGameRunning(_gameDirectory))
+                {
+                    ShowLimelightDialog(
+                        "CLOSE THE GAME FIRST",
+                        "Dead as Disco must be closed before updating Stagehand's managed runtime files.",
+                        LimelightDialogTone.Warning,
+                        eyebrow: "STAGEHAND UPDATE PAUSED");
+                    return;
+                }
+
+                Ue4ssDetectionResult loader =
+                    _ue4ssDetectionService.Detect(_gameDirectory);
+                if (!loader.IsInstalled)
+                {
+                    throw new InvalidOperationException(
+                        "No existing UE4SS Live Loader was detected. This Stagehand-only action will not install or replace UE4SS.");
+                }
+
+                StagehandPayloadManifest installed =
+                    _stagehandPayloadService.EnsureInstalled(loader);
+                RefreshStagehandScriptsPage();
+                ShowLimelightDialog(
+                    "STAGEHAND RUNTIME UPDATED",
+                    $"Stagehand {installed.StagehandVersion} · API {installed.ApiVersion} is ready.",
+                    LimelightDialogTone.Success,
+                    details:
+                        "Only Limelight's marked Stagehand files and the Stagehand mods.txt entry were managed. " +
+                        "UE4SS, signature files, UE4SS-settings.ini, and third-party mods were left untouched.",
+                    eyebrow: "STAGEHAND-ONLY UPDATE");
+            }
+            catch (Exception exception)
+            {
+                ShowLimelightDialog(
+                    "STAGEHAND RUNTIME NOT UPDATED",
+                    "Limelight left the existing loader and mod files untouched.",
+                    LimelightDialogTone.Error,
+                    details: exception.Message,
+                    eyebrow: "STAGEHAND UPDATE FAILED");
+            }
+        }
+
+        private void SetStagehandScriptEnabledRequested(string id, bool enabled)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_gameDirectory))
+                {
+                    throw new InvalidOperationException("Connect Dead as Disco before managing Stagehand scripts.");
+                }
+
+                Ue4ssDetectionResult loader = _ue4ssDetectionService.Detect(_gameDirectory);
+                _stagehandLogicModPackageService.SetEnabled(loader, id, enabled);
+                RefreshStagehandScriptsPage();
+                ShowNotification(
+                    enabled ? "STAGEHAND SCRIPT ENABLED" : "STAGEHAND SCRIPT DISABLED",
+                    "The change will apply on the next Dead as Disco launch.",
+                    isError: false);
+            }
+            catch (Exception exception)
+            {
+                ShowLimelightDialog(
+                    "STAGEHAND SCRIPT NOT CHANGED",
+                    "Limelight could not update this script's launch state.",
+                    LimelightDialogTone.Error,
+                    details: exception.Message,
+                    eyebrow: "SCRIPT CONTROL FAILED");
+            }
+        }
+
+        private void RemoveStagehandScriptRequested(string id)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_gameDirectory))
+                {
+                    throw new InvalidOperationException("Connect Dead as Disco before managing Stagehand scripts.");
+                }
+
+                Ue4ssDetectionResult loader = _ue4ssDetectionService.Detect(_gameDirectory);
+                InstalledStagehandScript? script =
+                    _stagehandLogicModPackageService
+                        .ListInstalled(loader)
+                        .FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+                if (script is null)
+                {
+                    throw new InvalidOperationException("The selected Stagehand script is no longer installed.");
+                }
+                if (script.IsBundled)
+                {
+                    ShowLimelightDialog(
+                        "BUNDLED SCRIPT",
+                        "The Stagehand proof script belongs to Limelight's runtime. Disable it if you do not want it to run.",
+                        LimelightDialogTone.Information,
+                        eyebrow: "SCRIPT KEPT");
+                    return;
+                }
+                if (_gameProcessService.IsGameRunning(_gameDirectory))
+                {
+                    ShowLimelightDialog(
+                        "CLOSE THE GAME FIRST",
+                        "Dead as Disco must be closed before removing a Stagehand script.",
+                        LimelightDialogTone.Warning,
+                        eyebrow: "SCRIPT REMOVAL PAUSED");
+                    return;
+                }
+
+                LimelightDialogChoice confirmation = ShowLimelightDialog(
+                    "REMOVE STAGEHAND SCRIPT?",
+                    $"Remove {script.Name} from Limelight?",
+                    LimelightDialogTone.Question,
+                    primaryAction: "REMOVE SCRIPT",
+                    secondaryAction: "KEEP SCRIPT",
+                    details:
+                        $"ID: {script.Id}\n" +
+                        $"Version: {script.Version}\n\n" +
+                        "This permanently deletes the script and its namespaced settings, storage, and runtime log.",
+                    eyebrow: "PERMANENT SCRIPT REMOVAL",
+                    footerHint: "This cannot be undone. You can reinstall the original .stagehand.zip later.");
+                if (confirmation != LimelightDialogChoice.Primary)
+                {
+                    return;
+                }
+
+                _stagehandLogicModPackageService.Remove(loader, script.Id);
+                RefreshStagehandScriptsPage();
+                ShowNotification(
+                    "STAGEHAND SCRIPT REMOVED",
+                    $"{script.Name} and its namespaced data were deleted.",
+                    isError: false);
+            }
+            catch (Exception exception)
+            {
+                ShowLimelightDialog(
+                    "STAGEHAND SCRIPT NOT REMOVED",
+                    "Limelight left the script in place.",
+                    LimelightDialogTone.Error,
+                    details: exception.Message,
+                    eyebrow: "SCRIPT REMOVAL FAILED");
+            }
+        }
+
         private void ShowProfiles_Click(
             object sender,
             MouseButtonEventArgs e)
@@ -6469,6 +6718,11 @@ namespace Limelight
 
         private void ApplyNavigationAppearance()
         {
+            StagehandScriptsPageControl.Visibility =
+                _selectedNavigationPage == NavigationPage.StagehandScripts
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
             MultiplayerPageControl.Visibility =
                 _selectedNavigationPage ==
                     NavigationPage.Multiplayer
@@ -6488,6 +6742,12 @@ namespace Limelight
                 MyModsNavigationIcon,
                 MyModsNavigationText,
                 _selectedNavigationPage == NavigationPage.MyMods);
+
+            ApplyNavigationItemAppearance(
+                StagehandScriptsNavigation,
+                StagehandScriptsNavigationIcon,
+                StagehandScriptsNavigationText,
+                _selectedNavigationPage == NavigationPage.StagehandScripts);
 
             ApplyNavigationItemAppearance(
                 ProfilesNavigation,
@@ -6618,6 +6878,8 @@ namespace Limelight
                  _selectedNavigationPage == NavigationPage.Dashboard) ||
                 (navigation == MyModsNavigation &&
                  _selectedNavigationPage == NavigationPage.MyMods) ||
+                (navigation == StagehandScriptsNavigation &&
+                 _selectedNavigationPage == NavigationPage.StagehandScripts) ||
                 (navigation == ProfilesNavigation &&
                  _selectedNavigationPage == NavigationPage.Profiles) ||
                 (navigation == LiveLoadersNavigation &&
@@ -6648,6 +6910,13 @@ namespace Limelight
             {
                 icon = MyModsNavigationIcon;
                 label = MyModsNavigationText;
+                return;
+            }
+
+            if (navigation == StagehandScriptsNavigation)
+            {
+                icon = StagehandScriptsNavigationIcon;
+                label = StagehandScriptsNavigationText;
                 return;
             }
 
@@ -7556,6 +7825,8 @@ namespace Limelight
                         "Managing the Limelight dashboard",
                     NavigationPage.MyMods =>
                         "Browsing character mods",
+                    NavigationPage.StagehandScripts =>
+                        "Managing Stagehand scripts",
                     NavigationPage.Profiles =>
                         "Building character profiles",
                     NavigationPage.LiveLoaders =>
@@ -7688,7 +7959,10 @@ namespace Limelight
                         loader);
 
                     _nativeBridgeInstallerService.EnsureInstalled(
-    loader);
+                        loader);
+
+                    _stagehandPayloadService.EnsureInstalled(
+                        loader);
                 });
 
                 UpdateGameRunningStatus();
@@ -8609,7 +8883,7 @@ namespace Limelight
                             Environment.SpecialFolder.UserProfile),
                         "Downloads"),
                     ModArchiveSupport.SupportedExtensions,
-                    "MOD ARCHIVES · ZIP · RAR · 7Z");
+                    "MOD + STAGEHAND ARCHIVES · ZIP · RAR · 7Z");
 
             if (string.IsNullOrWhiteSpace(archivePath))
             {
@@ -8686,7 +8960,7 @@ namespace Limelight
             {
                 ShowLimelightDialog(
                     "MOD ARCHIVE REQUIRED",
-                    "Drop one or more Dead as Disco ZIP, RAR, or 7Z mod archives into Limelight.",
+                    "Drop one or more Dead as Disco mod archives or Stagehand script packages into Limelight.",
                     LimelightDialogTone.Error,
                     eyebrow: "IMPORT MISSED ITS CUE");
 
@@ -8855,6 +9129,20 @@ namespace Limelight
 
             try
             {
+                StagehandLogicModPackageInspection stagehandInspection =
+                    await Task.Run(() =>
+                        _stagehandLogicModPackageService.Inspect(
+                            archivePath));
+
+                if (stagehandInspection.IsStagehandPackage)
+                {
+                    await ImportStagehandLogicModPackageAsync(
+                        archivePath,
+                        stagehandInspection);
+
+                    return;
+                }
+
                 ModArchiveFingerprintResult fingerprintResult =
                     await Task.Run(() =>
                         _modLibraryService.GetArchiveFingerprintResult(
@@ -8995,6 +9283,137 @@ namespace Limelight
                 ModImportProgressOverlay.Visibility =
                     Visibility.Collapsed;
             }
+        }
+
+        public async Task HandleStartupArgumentsAsync(string[] arguments)
+        {
+            for (int index = 0; index < arguments.Length - 1; index++)
+            {
+                if (string.Equals(
+                        arguments[index],
+                        "--import-stagehand",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    await ImportModArchiveAsync(arguments[index + 1]);
+                    return;
+                }
+            }
+        }
+
+        private async Task ImportStagehandLogicModPackageAsync(
+            string archivePath,
+            StagehandLogicModPackageInspection inspection)
+        {
+            if (!inspection.IsValid ||
+                inspection.Manifest is null)
+            {
+                ShowLimelightDialog(
+                    "INVALID STAGEHAND SCRIPT",
+                    "Limelight recognized a Stagehand package, but its API or safety contract is invalid.",
+                    LimelightDialogTone.Error,
+                    details: inspection.Message,
+                    eyebrow: "SCRIPT IMPORT BLOCKED");
+
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_gameDirectory))
+            {
+                ShowLimelightDialog(
+                    "CONNECT THE GAME FIRST",
+                    "Connect Limelight to Dead as Disco before installing a Stagehand script.",
+                    LimelightDialogTone.Warning,
+                    eyebrow: "SCRIPT IMPORT PAUSED");
+
+                return;
+            }
+
+            Ue4ssDetectionResult loader =
+                _ue4ssDetectionService.Detect(
+                    _gameDirectory);
+
+            if (!loader.IsInstalled)
+            {
+                ShowLimelightDialog(
+                    "LIMELIGHT RUNTIME REQUIRED",
+                    "Install or repair Limelight's Live Loader before adding a Stagehand script.",
+                    LimelightDialogTone.Warning,
+                    details:
+                        "Stagehand scripts run through Limelight's managed UE4SS runtime. " +
+                        "Limelight will not execute native code from this package.",
+                    eyebrow: "SCRIPT IMPORT PAUSED");
+
+                return;
+            }
+
+            StagehandLogicModManifest manifest =
+                inspection.Manifest;
+
+            string permissionReport =
+                manifest.Permissions.Count == 0
+                    ? "None"
+                    : string.Join(
+                        Environment.NewLine,
+                        manifest.Permissions.Select(permission =>
+                            $"• {permission}"));
+
+            LimelightDialogChoice confirmation =
+                ShowLimelightDialog(
+                    "INSTALL STAGEHAND SCRIPT?",
+                    $"{manifest.Name} v{manifest.Version} is a Lua logic mod for Stagehand API {manifest.ApiVersion}.",
+                    LimelightDialogTone.Question,
+                    primaryAction: "INSTALL SCRIPT",
+                    secondaryAction: "NOT NOW",
+                    details:
+                        $"ID: {manifest.Id}\n" +
+                        $"Trust label (self-reported): {manifest.DeclaredTrust}\n" +
+                        $"Stagehand local review: {(inspection.IsReviewCurrent ? "exact hashes match" : "missing, stale, or changed")}\n" +
+                        "Native code: no\n" +
+                        "Secure Lua sandbox: no\n\n" +
+                        "Requested permissions:\n" +
+                        permissionReport,
+                    eyebrow: "REVIEW SCRIPT TRUST",
+                    footerHint: inspection.IsReviewCurrent
+                        ? "Local review matches these exact files. Lua still runs as trusted code inside the game process."
+                        : "This is not a secure sandbox and the exact files are not locally approved. Only install scripts you trust.");
+
+            if (confirmation != LimelightDialogChoice.Primary)
+            {
+                return;
+            }
+
+            ShowModImportProgress(
+                "INSTALLING STAGEHAND SCRIPT...");
+
+            _stagehandPayloadService.EnsureInstalled(
+                loader);
+
+            StagehandLogicModInstallResult result =
+                await Task.Run(() =>
+                    _stagehandLogicModPackageService.Install(
+                        archivePath,
+                        loader));
+
+            RefreshStagehandScriptsPage();
+
+            bool gameRunning =
+                _gameProcessService.IsGameRunning(
+                    _gameDirectory);
+
+            ShowLimelightDialog(
+                result.Updated
+                    ? "STAGEHAND SCRIPT UPDATED"
+                    : "STAGEHAND SCRIPT INSTALLED",
+                $"{result.Manifest.Name} is ready for Stagehand.",
+                LimelightDialogTone.Success,
+                details:
+                    $"Version: {result.Manifest.Version}\n" +
+                    $"Permissions: {result.Manifest.Permissions.Count}\n" +
+                    $"Installed to: {result.InstallDirectory}\n" +
+                    (gameRunning
+                        ? "Dead as Disco is already running; the script will load on the next launch."
+                        : "Launch Dead as Disco through Limelight to run the script."),
+                eyebrow: "SCRIPT READY FOR THE STAGE");
         }
 
         private void ShowModImportProgress(
@@ -9583,7 +10002,8 @@ namespace Limelight
                         !_ue4ssConfigurationService.IsRuntimeCompatible(loader) ||
                         !_ue4ssConfigurationService.IsConfigured(loader) ||
                         !_liveLoaderBridgeService.IsInstalled(loader) ||
-                        !_nativeBridgeInstallerService.IsCurrentVersionInstalled(loader))
+                        !_nativeBridgeInstallerService.IsCurrentVersionInstalled(loader) ||
+                        !_stagehandPayloadService.IsCurrentVersionInstalled(loader))
                     {
                         throw new InvalidOperationException(
                             "The Live Loader needs to be repaired before this launch. " +

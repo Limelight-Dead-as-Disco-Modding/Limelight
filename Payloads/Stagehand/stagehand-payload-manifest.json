@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "stagehandVersion": "0.5.1-prototype",
+  "apiVersion": "1.3.0",
+  "targetModName": "LimelightStagehand",
+  "package": {
+    "fileName": "LimelightStagehand.zip",
+    "resourceName": "Limelight.Payloads.Stagehand.LimelightStagehand.zip",
+    "size": 24137,
+    "sha256": "EC612E7157795AF0C91750D2C13DAD84E860521B194D03595F041A65909390C9"
+  },
+  "files": [
+    {
+      "targetRelativePath": "LogicMods/LimelightStagehandSample/.limelight-stagehand-script.json",
+      "size": 192,
+      "sha256": "54455DF754642DDA340877C03FA4B65586A68B00BE36F416D866652EC46CA4BF"
+    },
+    {
+      "targetRelativePath": "LogicMods/LimelightStagehandSample/main.lua",
+      "size": 2960,
+      "sha256": "ABD7ED14F877BE4D246D9D2434BDC9EF76DACDD5332F8E77D38F665A77D4F215"
+    },
+    {
+      "targetRelativePath": "LogicMods/LimelightStagehandSample/stagehand.json",
+      "size": 865,
+      "sha256": "71DFE2578CA4567C9271FE37FC0A28F1566A7A28669EE8714B6E37DD69253A78"
+    },
+    {
+      "targetRelativePath": "Scripts/main.lua",
+      "size": 59993,
+      "sha256": "09AC13C08885CD883A188E2750ED772CBEFC53934E116CB75BED0E372D8E1060"
+    },
+    {
+      "targetRelativePath": "Scripts/stagehand/json.lua",
+      "size": 11898,
+      "sha256": "EB3D7C07770261BAE6EEC181AAE2BB2309C606F8C298B6B6A7CB0847D3CFF9DC"
+    },
+    {
+      "targetRelativePath": "Scripts/stagehand/runtime.lua",
+      "size": 40427,
+      "sha256": "0474D480CC24ED6C9407FF08FA62AEE3DA74A46F4727B4F9EFF32C859CFB1425"
+    }
+  ]
+}

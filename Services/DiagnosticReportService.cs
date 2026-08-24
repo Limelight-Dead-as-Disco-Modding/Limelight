@@ -79,6 +79,7 @@ namespace Limelight.Services
             report.AppendLine($"Runtime compatible: {SafeRuntimeCompatibility(loader)}");
             report.AppendLine($"Lua bridge installed: {SafeBridgeInstalled(loader)}");
             report.AppendLine($"Native bridge current: {SafeNativeBridgeCurrent(loader)}");
+            report.AppendLine($"Stagehand current: {compatibility.StagehandCurrent}");
             report.AppendLine($"Lua bridge online: {SafeBridgeOnline()}");
             report.AppendLine();
 
