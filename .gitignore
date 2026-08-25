@@ -363,3 +363,25 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /NEXUS_DESCRIPTION.bbcode
+
+# I keep the bits Unreal can rebuild out of source control; nobody needs my shader crumbs.
+/Binaries/
+/DerivedDataCache/
+/Intermediate/
+/Saved/
+/.vs/
+/.idea/
+# Unreal generates these when it cooks and packages the project.
+/Build/Windows/FileOpenOrder/
+/StagedBuilds/
+# Visual Studio and Rider can regenerate their project files.
+/*.sln
+/*.suo
+/*.opensdf
+/*.sdf
+/*.VC.db
+/*.VC.opendb
+/.vsconfig
+# Plugin build output is local too, if I add plugins later without summoning chaos.
+/Plugins/*/Binaries/
+/Plugins/*/Intermediate/
