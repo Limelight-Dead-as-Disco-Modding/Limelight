@@ -257,13 +257,23 @@ namespace Limelight.Services
                         CreateSlotDirectoryName(mod))
                     : modsDirectory;
 
+            IEnumerable<string> metadataFiles =
+                mod.IsCharacterSlotMod
+                    ? mod.CharacterSlotInfoFiles is { Count: > 0 }
+                        ? mod.CharacterSlotInfoFiles
+                        : new List<string>
+                        {
+                            mod.CharacterSlotInfoFile
+                        }
+                    : mod.IsArenaSlotMod
+                        ? new List<string>
+                        {
+                            mod.ArenaSlotInfoFile
+                        }
+                        : new List<string>();
+
             IEnumerable<string> sourceFiles =
-                mod.PackageFiles.Concat(
-                    mod.IsCharacterSlotMod
-                        ? new[] { mod.CharacterSlotInfoFile }
-                        : mod.IsArenaSlotMod
-                            ? new[] { mod.ArenaSlotInfoFile }
-                        : Array.Empty<string>())
+                mod.PackageFiles.Concat(metadataFiles)
                     .Distinct(
                         StringComparer.OrdinalIgnoreCase);
 

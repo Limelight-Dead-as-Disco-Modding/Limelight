@@ -140,10 +140,20 @@ namespace Limelight.Services
                     .Where(mod =>
                         mod.IsCharacterSlotMod &&
                         Directory.Exists(mod.InstallDirectory))
-                    .Select(mod =>
-                        mod.CharacterSlotDefinitionObjectPath)
-                    .Where(path =>
-                        !string.IsNullOrWhiteSpace(path))
+                    .SelectMany(mod =>
+                        mod.CharacterSlotDefinitionPackagePaths is { Count: > 0 }
+                            ? mod.CharacterSlotDefinitionPackagePaths.AsEnumerable()
+                            : new[]
+                            {
+                                mod.CharacterSlotDefinitionPackagePath
+                            })
+                    .Where(packagePath =>
+                        !string.IsNullOrWhiteSpace(packagePath))
+                    .Select(packagePath =>
+                        packagePath +
+                        "." +
+                        packagePath[
+                            (packagePath.LastIndexOf('/') + 1)..])
                     .Distinct(
                         StringComparer.OrdinalIgnoreCase)
                     .OrderBy(path =>

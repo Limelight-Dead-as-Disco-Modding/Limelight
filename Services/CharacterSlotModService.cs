@@ -25,6 +25,14 @@ namespace Limelight.Services
             string previousDefinitionPackagePath =
                 mod.CharacterSlotDefinitionPackagePath;
 
+            List<string> previousInfoFiles =
+                mod.CharacterSlotInfoFiles?.ToList() ??
+                new List<string>();
+
+            List<string> previousDefinitionPackagePaths =
+                mod.CharacterSlotDefinitionPackagePaths?.ToList() ??
+                new List<string>();
+
             mod.CharacterSlotName =
                 string.Empty;
 
@@ -36,6 +44,12 @@ namespace Limelight.Services
 
             mod.CharacterSlotDefinitionPackagePath =
                 string.Empty;
+
+            mod.CharacterSlotInfoFiles =
+                new List<string>();
+
+            mod.CharacterSlotDefinitionPackagePaths =
+                new List<string>();
 
             CharacterSlotMetadata? metadata =
                 Detect(mod);
@@ -53,6 +67,12 @@ namespace Limelight.Services
 
                 mod.CharacterSlotDefinitionPackagePath =
                     metadata.DefinitionPackagePath;
+
+                mod.CharacterSlotInfoFiles.AddRange(
+                    metadata.InfoFileRelativePaths);
+
+                mod.CharacterSlotDefinitionPackagePaths.AddRange(
+                    metadata.DefinitionPackagePaths);
             }
 
             return
@@ -71,7 +91,13 @@ namespace Limelight.Services
                 !string.Equals(
                     previousDefinitionPackagePath,
                     mod.CharacterSlotDefinitionPackagePath,
-                    StringComparison.Ordinal);
+                    StringComparison.Ordinal) ||
+                !previousInfoFiles.SequenceEqual(
+                    mod.CharacterSlotInfoFiles,
+                    StringComparer.OrdinalIgnoreCase) ||
+                !previousDefinitionPackagePaths.SequenceEqual(
+                    mod.CharacterSlotDefinitionPackagePaths,
+                    StringComparer.OrdinalIgnoreCase);
         }
 
         private static CharacterSlotMetadata? Detect(
@@ -90,6 +116,9 @@ namespace Limelight.Services
 
             string safeRootPrefix =
                 safeRoot + Path.DirectorySeparatorChar;
+
+            var candidates =
+                new List<CharacterSlotCandidate>();
 
             foreach (string infoFile in
                      Directory.EnumerateFiles(
@@ -118,21 +147,62 @@ namespace Limelight.Services
                     continue;
                 }
 
-                return new CharacterSlotMetadata(
-                    characterName,
-                    Path.GetRelativePath(
-                        safeRoot,
-                        fullInfoFile),
-                    FindCharacterMeshPackagePath(
-                        mod,
-                        characterName)!,
-                    CharacterAssetRoot +
-                    characterName +
-                    "/PPCD_" +
-                    characterName);
+                candidates.Add(
+                    new CharacterSlotCandidate(
+                        characterName,
+                        Path.GetRelativePath(
+                            safeRoot,
+                            fullInfoFile),
+                        FindCharacterMeshPackagePath(
+                            mod,
+                            characterName)!,
+                        CharacterAssetRoot +
+                        characterName +
+                        "/PPCD_" +
+                        characterName));
             }
 
-            return null;
+            if (candidates.Count == 0)
+            {
+                return null;
+            }
+
+            CharacterSlotCandidate primary =
+                candidates
+                    .OrderByDescending(candidate =>
+                        mod.DisplayName.Contains(
+                            candidate.CharacterName,
+                            StringComparison.OrdinalIgnoreCase))
+                    .ThenBy(candidate =>
+                        candidate.CharacterName.Length)
+                    .ThenBy(candidate =>
+                        candidate.CharacterName,
+                        StringComparer.OrdinalIgnoreCase)
+                    .First();
+
+            return new CharacterSlotMetadata(
+                primary.CharacterName,
+                primary.InfoFileRelativePath,
+                primary.MeshPackagePath,
+                primary.DefinitionPackagePath,
+                candidates
+                    .Select(candidate =>
+                        candidate.InfoFileRelativePath)
+                    .Distinct(
+                        StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(path =>
+                        path,
+                        StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                candidates
+                    .Select(candidate =>
+                        candidate.DefinitionPackagePath)
+                    .Distinct(
+                        StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(path =>
+                        path,
+                        StringComparer.OrdinalIgnoreCase)
+                    .ToList());
         }
 
         private static string? TryReadCharacterName(
@@ -140,9 +210,23 @@ namespace Limelight.Services
         {
             try
             {
+                string json =
+                    File.ReadAllText(infoFile)
+                        .TrimStart();
+
+                if (json.StartsWith(
+                        "$",
+                        StringComparison.Ordinal))
+                {
+                    // I accept the marker used by original Character Loader
+                    // packs because its Lua reader treated it as metadata.
+                    json =
+                        json[1..]
+                            .TrimStart();
+                }
+
                 using JsonDocument document =
-                    JsonDocument.Parse(
-                        File.ReadAllText(infoFile));
+                    JsonDocument.Parse(json);
 
                 if (!document.RootElement.TryGetProperty(
                         "CharacterName",
@@ -178,6 +262,21 @@ namespace Limelight.Services
                 CharacterAssetRoot +
                 characterName +
                 "/";
+
+            string conventionalMeshPackagePath =
+                characterRoot +
+                characterName;
+
+            ModAssetPackage? conventionalMesh =
+                mod.AssetPackages.FirstOrDefault(package =>
+                    package.PackagePath.Equals(
+                        conventionalMeshPackagePath,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (conventionalMesh is not null)
+            {
+                return conventionalMesh.PackagePath;
+            }
 
             bool hasCharacterFolder =
                 mod.AssetPackages.Any(package =>
@@ -231,10 +330,18 @@ namespace Limelight.Services
                        : null);
         }
 
-        private sealed record CharacterSlotMetadata(
+        private sealed record CharacterSlotCandidate(
             string CharacterName,
             string InfoFileRelativePath,
             string MeshPackagePath,
             string DefinitionPackagePath);
+
+        private sealed record CharacterSlotMetadata(
+            string CharacterName,
+            string InfoFileRelativePath,
+            string MeshPackagePath,
+            string DefinitionPackagePath,
+            IReadOnlyList<string> InfoFileRelativePaths,
+            IReadOnlyList<string> DefinitionPackagePaths);
     }
 }

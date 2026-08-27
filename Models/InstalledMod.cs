@@ -34,11 +34,17 @@ namespace Limelight.Models
         public string CharacterSlotInfoFile { get; set; } =
             string.Empty;
 
+        public List<string> CharacterSlotInfoFiles { get; set; } =
+            new List<string>();
+
         public string CharacterSlotMeshPackagePath { get; set; } =
             string.Empty;
 
         public string CharacterSlotDefinitionPackagePath { get; set; } =
             string.Empty;
+
+        public List<string> CharacterSlotDefinitionPackagePaths { get; set; } =
+            new List<string>();
 
         public string ArenaSlotName { get; set; } =
             string.Empty;
@@ -121,7 +127,9 @@ namespace Limelight.Models
             {
                 if (IsCharacterSlotMod)
                 {
-                    return "CHARACTER SLOT";
+                    return CharacterSlotCount > 1
+                        ? "CHARACTER SLOT PACK"
+                        : "CHARACTER SLOT";
                 }
 
                 if (IsArenaSlotMod)
@@ -150,7 +158,9 @@ namespace Limelight.Models
             {
                 if (IsCharacterSlotMod)
                 {
-                    return "LIVE SWITCHING + LOCKER SLOT";
+                    return CharacterSlotCount > 1
+                        ? $"LIVE SWITCHING + {CharacterSlotCount} LOCKER SLOTS"
+                        : "LIVE SWITCHING + LOCKER SLOT";
                 }
 
                 if (IsArenaSlotMod)
@@ -247,6 +257,14 @@ namespace Limelight.Models
             !string.IsNullOrWhiteSpace(CharacterSlotInfoFile) &&
             !string.IsNullOrWhiteSpace(CharacterSlotMeshPackagePath) &&
             !string.IsNullOrWhiteSpace(CharacterSlotDefinitionPackagePath);
+
+        [JsonIgnore]
+        public int CharacterSlotCount =>
+            CharacterSlotDefinitionPackagePaths is { Count: > 0 }
+                ? CharacterSlotDefinitionPackagePaths.Count
+                : IsCharacterSlotMod
+                    ? 1
+                    : 0;
 
         [JsonIgnore]
         public bool IsArenaSlotMod =>
