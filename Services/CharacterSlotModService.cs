@@ -263,21 +263,6 @@ namespace Limelight.Services
                 characterName +
                 "/";
 
-            string conventionalMeshPackagePath =
-                characterRoot +
-                characterName;
-
-            ModAssetPackage? conventionalMesh =
-                mod.AssetPackages.FirstOrDefault(package =>
-                    package.PackagePath.Equals(
-                        conventionalMeshPackagePath,
-                        StringComparison.OrdinalIgnoreCase));
-
-            if (conventionalMesh is not null)
-            {
-                return conventionalMesh.PackagePath;
-            }
-
             bool hasCharacterFolder =
                 mod.AssetPackages.Any(package =>
                     package.PackagePath.StartsWith(
@@ -307,6 +292,21 @@ namespace Limelight.Services
                 CharacterAssetRoot +
                 characterName +
                 "/";
+
+            string conventionalMeshPackagePath =
+                characterRoot +
+                characterName;
+
+            ModAssetPackage? conventionalMesh =
+                mod.AssetPackages.FirstOrDefault(package =>
+                    package.PackagePath.Equals(
+                        conventionalMeshPackagePath,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (conventionalMesh is not null)
+            {
+                return conventionalMesh.PackagePath;
+            }
 
             List<ModAssetPackage> meshes =
                 mod.AssetPackages
