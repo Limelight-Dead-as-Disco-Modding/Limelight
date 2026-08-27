@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Limelight.Models
 {
@@ -64,6 +64,10 @@ namespace Limelight.Models
         // leaves no mod ID to carry the cleanup note home.
         public bool CharacterSlotCatalogueNeedsSynchronization { get; set; }
 
+        // I keep arena catalogue cleanup independent because the final arena
+        // slot can be removed without another mod carrying that state.
+        public bool ArenaSlotCatalogueNeedsSynchronization { get; set; }
+
         public string DismissedLiveLoaderPromptForGameDirectory { get; set; } =
             string.Empty;
 
@@ -76,3 +80,4 @@ namespace Limelight.Models
             new List<InstalledMod>();
     }
 }
+

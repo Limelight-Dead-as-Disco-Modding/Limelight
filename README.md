@@ -45,6 +45,7 @@ each mode handles its own part of the show.
 | Character library             | Import ZIP, RAR, and 7Z archives, drag and drop mods, rename entries, reject duplicates, and remove mods from one library.                         |
 | Normal Live Loader            | Activate a supported character replacement without restarting the game.                                                                            |
 | Character Slot Loader support | Detect a slot mod's data asset and unique mesh, keep its original Locker layout, and switch it through Normal Live Loader or X19.                  |
+| Arena Slot Loader support     | Detect additive Infinite Disco arenas, deploy their manifests, and install or repair Limelight's standalone shared arena loader automatically.     |
 | X19 LLoader                   | Rotate through a chosen cast by keyboard or controller, in order or shuffled.                                                                      |
 | LimelightMP (experimental)    | Host or join a private two-PC co-op test where each player renders their own game and the client controls Chuckles through an authenticated relay. |
 | Profiles                      | Save reusable groups of characters and assign an entire profile to X19 rotation.                                                                   |
@@ -152,6 +153,17 @@ Both players should use the same game build and LimelightMP version. Tailscale c
 Limelight is primarily designed for Unreal Engine IoStore character replacements containing matching `.pak`, `.ucas`, and `.utoc` files. Imported archives are validated before entering the library.
 
 Character Slot Loader packages are detected when `info.json` names a character whose matching `PPCD_<CharacterName>` data asset and skeletal mesh are present under `/Game/Pagoda/Characters/Player/ModdedCharacters/<CharacterName>`. Limelight preserves the contained folder needed by the in-game Locker, live-mounts its PPCD definition, and applies that definition through the game's own body-type cosmetic pipeline in Normal Live Loader or X19 instead of requiring an `SK_Charlie` replacement. When Character Slot mods are present, Limelight installs and verifies its own small Character Loader Logic Mod in `Pagoda\Content\Paks\LogicMods`; restart Dead as Disco after its first installation. Existing setups using the original `CharacterLoader.pak`, `.ucas`, and `.utoc` files remain supported as a legacy fallback.
+
+Arena Slot packages keep the familiar `ArenaName` property but also declare a
+unique `ArenaId` gameplay tag, a full `ArenaDefinition` object path, and an
+`ArenaMap` package path. Limelight verifies that both assets are present,
+deploys every arena manifest in its own managed folder, and installs or repairs
+the shared `LimelightArenaSlotLoader` Logic Mod and UE4SS script. The loader
+adds choices beside Infinite Disco's stock arena without replacing
+`DA_Arenas`, `LI_Arenas`, or `Default/LI_Arena_Default`. ArenaName-only and
+default-map replacement packages continue to behave as legacy replacements
+until their authors give them unique packages and the complete arena-slot
+manifest.
 
 Live switching depends on the contents and structure of each mod. A mod that works after restarting the game may still contain assets that Unreal cannot safely replace at runtime. See the [compatibility guide](https://henreh1.github.io/LimelightWiki/mod-compatibility.html) for current details.
 

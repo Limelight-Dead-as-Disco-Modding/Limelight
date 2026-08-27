@@ -74,7 +74,8 @@ namespace Limelight.Views
             List<InstalledMod> otherMods =
                 visibleMods
                     .Where(mod =>
-                        mod.IsConventionalMod)
+                        mod.IsConventionalMod ||
+                        mod.IsArenaSlotMod)
                     .ToList();
 
             CharacterModsList.ItemsSource = null;
@@ -148,7 +149,7 @@ namespace Limelight.Views
                 $"CHARACTERS ({_characterModCount})";
 
             OtherModsTabButton.Content =
-                $"OTHER REPLACEMENTS ({_otherModCount})";
+                $"OTHER MODS ({_otherModCount})";
 
             CharactersTabButton.Background =
                 (Brush)FindResource(

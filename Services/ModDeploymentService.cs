@@ -17,30 +17,30 @@ namespace Limelight.Services
 
         public void Activate(
             InstalledMod mod,
-            IEnumerable<InstalledMod> characterSlotMods,
+            IEnumerable<InstalledMod> companionMods,
             string gameDirectory)
         {
             Synchronize(
                 mod,
-                characterSlotMods,
+                companionMods,
                 gameDirectory);
         }
 
         public void Deactivate(
-            IEnumerable<InstalledMod> characterSlotMods,
+            IEnumerable<InstalledMod> companionMods,
             string gameDirectory)
         {
-            // I only put the spotlight away here. Imported character slots
-            // stay backstage because the in-game Locker still needs them.
+            // I only put the spotlight away here. Imported slot mods stay
+            // backstage because their in-game catalogues still need them.
             Synchronize(
                 activeMod: null,
-                characterSlotMods,
+                companionMods,
                 gameDirectory);
         }
 
         private static void Synchronize(
             InstalledMod? activeMod,
-            IEnumerable<InstalledMod> characterSlotMods,
+            IEnumerable<InstalledMod> companionMods,
             string gameDirectory)
         {
             string modsDirectory =
@@ -54,7 +54,7 @@ namespace Limelight.Services
             List<DeploymentFile> newFiles =
                 BuildDeploymentList(
                     activeMod,
-                    characterSlotMods,
+                    companionMods,
                     modsDirectory);
 
             EnsureNoManualFileConflicts(
@@ -209,7 +209,7 @@ namespace Limelight.Services
 
         private static List<DeploymentFile> BuildDeploymentList(
             InstalledMod? activeMod,
-            IEnumerable<InstalledMod> characterSlotMods,
+            IEnumerable<InstalledMod> companionMods,
             string modsDirectory)
         {
             var deploymentFiles =
@@ -223,8 +223,10 @@ namespace Limelight.Services
                 (activeMod is null
                     ? Enumerable.Empty<InstalledMod>()
                     : new[] { activeMod })
-                .Concat(characterSlotMods.Where(mod =>
-                    mod.IsCharacterSlotMod))
+                .Concat(companionMods.Where(mod =>
+                    mod.IsCharacterSlotMod ||
+                    mod.IsArenaSlotMod ||
+                    mod.IsConventionalMod))
                 .GroupBy(
                     mod => mod.Id,
                     StringComparer.OrdinalIgnoreCase)
@@ -249,16 +251,18 @@ namespace Limelight.Services
             ICollection<DeploymentFile> deploymentFiles)
         {
             string destinationDirectory =
-                mod.IsCharacterSlotMod
+                mod.IsCharacterSlotMod || mod.IsArenaSlotMod
                     ? Path.Combine(
                         modsDirectory,
-                        CreateCharacterSlotDirectoryName(mod))
+                        CreateSlotDirectoryName(mod))
                     : modsDirectory;
 
             IEnumerable<string> sourceFiles =
                 mod.PackageFiles.Concat(
                     mod.IsCharacterSlotMod
                         ? new[] { mod.CharacterSlotInfoFile }
+                        : mod.IsArenaSlotMod
+                            ? new[] { mod.ArenaSlotInfoFile }
                         : Array.Empty<string>())
                     .Distinct(
                         StringComparer.OrdinalIgnoreCase);
@@ -306,27 +310,35 @@ namespace Limelight.Services
             }
         }
 
-        private static string CreateCharacterSlotDirectoryName(
+        private static string CreateSlotDirectoryName(
             InstalledMod mod)
         {
-            string safeCharacterName =
+            string slotName =
+                mod.IsArenaSlotMod
+                    ? mod.ArenaSlotName
+                    : mod.CharacterSlotName;
+
+            string safeSlotName =
                 new string(
-                    mod.CharacterSlotName
+                    slotName
                         .Where(character =>
                             char.IsLetterOrDigit(character) ||
                             character == '_')
                         .ToArray());
 
-            if (string.IsNullOrWhiteSpace(safeCharacterName))
+            if (string.IsNullOrWhiteSpace(safeSlotName))
             {
-                safeCharacterName = "Character";
+                safeSlotName =
+                    mod.IsArenaSlotMod
+                        ? "Arena"
+                        : "Character";
             }
 
             string idSuffix =
                 mod.Id[..Math.Min(8, mod.Id.Length)];
 
             return
-                $"Limelight_{safeCharacterName}_{idSuffix}";
+                $"Limelight_{safeSlotName}_{idSuffix}";
         }
 
         private static void EnsureNoManualFileConflicts(

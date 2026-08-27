@@ -7,7 +7,7 @@ namespace Limelight.Services
 {
     public sealed class ModAssetScannerService
     {
-        public const int CurrentManifestVersion = 4;
+        public const int CurrentManifestVersion = 5;
 
         public List<ModAssetPackage> Scan(
             string modDirectory)
@@ -42,6 +42,9 @@ namespace Limelight.Services
                 .Where(path =>
                     path.EndsWith(
                         ".uasset",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(
+                        ".umap",
                         StringComparison.OrdinalIgnoreCase))
                 .Select(TryCreatePackage)
                 .Where(package => package != null)
@@ -78,14 +81,31 @@ namespace Limelight.Services
                 normalizedPath[
                     (contentIndex + contentMarker.Length)..];
 
+            string extension =
+                Path.GetExtension(contentPath);
+
+            if (!extension.Equals(
+                    ".uasset",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !extension.Equals(
+                    ".umap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
             string packagePath =
                 "/Game/" +
-                contentPath[..^".uasset".Length];
+                contentPath[..^extension.Length];
 
             return new ModAssetPackage
             {
                 PackagePath = packagePath,
-                Kind = Classify(packagePath)
+                Kind = extension.Equals(
+                    ".umap",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? ModAssetKind.Map
+                    : Classify(packagePath)
             };
         }
 

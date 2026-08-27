@@ -33,6 +33,7 @@ namespace Limelight.Services
         private readonly ModArchiveValidator _validator;
         private readonly ModAssetScannerService _assetScanner;
         private readonly CharacterSlotModService _characterSlotModService;
+        private readonly ArenaSlotModService _arenaSlotModService;
 
         public ModLibraryService()
         {
@@ -46,6 +47,8 @@ namespace Limelight.Services
             _assetScanner = new ModAssetScannerService();
             _characterSlotModService =
                 new CharacterSlotModService();
+            _arenaSlotModService =
+                new ArenaSlotModService();
         }
 
         public InstalledMod Import(
@@ -121,6 +124,9 @@ namespace Limelight.Services
                 };
 
                 _characterSlotModService.RefreshMetadata(
+                    installedMod);
+
+                _arenaSlotModService.RefreshMetadata(
                     installedMod);
 
                 return installedMod;

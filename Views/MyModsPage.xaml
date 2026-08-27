@@ -95,6 +95,14 @@
                                                     Value="ENABLE"/>
                                         </DataTrigger>
 
+                                        <DataTrigger Binding="{Binding IsArenaSlotMod}"
+                                                     Value="True">
+                                            <Setter Property="Content"
+                                                    Value="SUPPORTED"/>
+                                            <Setter Property="IsEnabled"
+                                                    Value="False"/>
+                                        </DataTrigger>
+
                                         <DataTrigger Binding="{Binding IsActive}"
                                                      Value="True">
                                             <Setter Property="Content"

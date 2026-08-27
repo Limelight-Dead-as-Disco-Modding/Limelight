@@ -40,6 +40,21 @@ namespace Limelight.Models
         public string CharacterSlotDefinitionPackagePath { get; set; } =
             string.Empty;
 
+        public string ArenaSlotName { get; set; } =
+            string.Empty;
+
+        public string ArenaSlotInfoFile { get; set; } =
+            string.Empty;
+
+        public string ArenaSlotId { get; set; } =
+            string.Empty;
+
+        public string ArenaSlotDefinitionObjectPath { get; set; } =
+            string.Empty;
+
+        public string ArenaSlotMapPackagePath { get; set; } =
+            string.Empty;
+
         public DateTimeOffset InstalledAt { get; set; } =
             DateTimeOffset.Now;
 
@@ -87,7 +102,8 @@ namespace Limelight.Models
 
         [JsonIgnore]
         public bool IsConventionalMod =>
-            !IsPlayerCharacterMod;
+            !IsPlayerCharacterMod &&
+            !IsArenaSlotMod;
 
         [JsonIgnore]
         public bool IsEnabledForNextLaunch { get; set; }
@@ -100,6 +116,11 @@ namespace Limelight.Models
                 if (IsCharacterSlotMod)
                 {
                     return "CHARACTER SLOT";
+                }
+
+                if (IsArenaSlotMod)
+                {
+                    return "ARENA SLOT";
                 }
 
                 if (IsPlayerCharacterMod)
@@ -124,6 +145,11 @@ namespace Limelight.Models
                 if (IsCharacterSlotMod)
                 {
                     return "LIVE SWITCHING + LOCKER SLOT";
+                }
+
+                if (IsArenaSlotMod)
+                {
+                    return "INFINITE DISCO ARENA CHOICE";
                 }
 
                 if (IsPlayerCharacterMod)
@@ -210,6 +236,14 @@ namespace Limelight.Models
             !string.IsNullOrWhiteSpace(CharacterSlotInfoFile) &&
             !string.IsNullOrWhiteSpace(CharacterSlotMeshPackagePath) &&
             !string.IsNullOrWhiteSpace(CharacterSlotDefinitionPackagePath);
+
+        [JsonIgnore]
+        public bool IsArenaSlotMod =>
+            !string.IsNullOrWhiteSpace(ArenaSlotName) &&
+            !string.IsNullOrWhiteSpace(ArenaSlotInfoFile) &&
+            !string.IsNullOrWhiteSpace(ArenaSlotId) &&
+            !string.IsNullOrWhiteSpace(ArenaSlotDefinitionObjectPath) &&
+            !string.IsNullOrWhiteSpace(ArenaSlotMapPackagePath);
 
         [JsonIgnore]
         public string CharacterSlotMeshObjectPath =>

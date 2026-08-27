@@ -91,6 +91,8 @@ namespace Limelight
         private readonly ModLibraryService _modLibraryService;
         private readonly CharacterSlotModService _characterSlotModService;
         private readonly CharacterSlotLoaderService _characterSlotLoaderService;
+        private readonly ArenaSlotModService _arenaSlotModService;
+        private readonly ArenaSlotLoaderService _arenaSlotLoaderService;
         private readonly AppSettings _settings;
         private readonly ModDeploymentService _modDeploymentService;
         private readonly ExistingModsMigrationService _existingModsMigrationService;
@@ -178,6 +180,12 @@ namespace Limelight
 
             _characterSlotLoaderService =
                 new CharacterSlotLoaderService();
+
+            _arenaSlotModService =
+                new ArenaSlotModService();
+
+            _arenaSlotLoaderService =
+                new ArenaSlotLoaderService();
 
             _modDeploymentService =
                 new ModDeploymentService();
@@ -276,11 +284,46 @@ namespace Limelight
             bool characterSlotMetadataChanged =
                 false;
 
+            bool arenaSlotMetadataChanged =
+                false;
+
+            bool assetManifestChanged =
+                false;
+
             foreach (InstalledMod installedMod in
                      _settings.InstalledMods)
             {
+                if (Directory.Exists(installedMod.InstallDirectory) &&
+                    installedMod.AssetManifestVersion <
+                        ModAssetScannerService.CurrentManifestVersion)
+                {
+                    try
+                    {
+                        // I rescan older catalogues because arena worlds live
+                        // in .umap entries that earlier manifests omitted.
+                        installedMod.AssetPackages =
+                            _modLibraryService.ScanAssets(
+                                installedMod);
+
+                        installedMod.AssetManifestVersion =
+                            ModAssetScannerService.CurrentManifestVersion;
+
+                        assetManifestChanged =
+                            true;
+                    }
+                    catch
+                    {
+                        // I leave the prior manifest intact so one damaged
+                        // archive cannot stop Limelight opening the library.
+                    }
+                }
+
                 characterSlotMetadataChanged |=
                     _characterSlotModService.RefreshMetadata(
+                        installedMod);
+
+                arenaSlotMetadataChanged |=
+                    _arenaSlotModService.RefreshMetadata(
                         installedMod);
             }
 
@@ -301,8 +344,28 @@ namespace Limelight
                     true;
             }
 
+            InstalledMod? firstArenaSlotMod =
+                _settings.InstalledMods.FirstOrDefault(mod =>
+                    mod.IsArenaSlotMod &&
+                    Directory.Exists(mod.InstallDirectory));
+
+            bool arenaSlotCatalogueFlagChanged =
+                firstArenaSlotMod is not null &&
+                !_settings.ArenaSlotCatalogueNeedsSynchronization;
+
+            if (firstArenaSlotMod is not null)
+            {
+                // I queue a deployment pass so every arena manifest is beside
+                // its containers before the shared loader scans ~mods.
+                _settings.ArenaSlotCatalogueNeedsSynchronization =
+                    true;
+            }
+
             if (characterSlotMetadataChanged ||
-                characterSlotCatalogueFlagChanged)
+                characterSlotCatalogueFlagChanged ||
+                arenaSlotMetadataChanged ||
+                arenaSlotCatalogueFlagChanged ||
+                assetManifestChanged)
             {
                 _settingsService.Save(_settings);
             }
@@ -2588,6 +2651,16 @@ namespace Limelight
                 return;
             }
 
+            if (!IsArenaSlotLoaderReady(gameDirectory))
+            {
+                SetLiveLoaderDisplay(
+                    "ARENA LOADER NEEDED",
+                    "The shared Arena Slot Loader is missing or out of date. Use Repair Live Loader in Settings.",
+                    isHealthy: false);
+
+                return;
+            }
+
             if (!isGameRunning)
             {
                 SetLiveLoaderDisplay(
@@ -2657,6 +2730,39 @@ namespace Limelight
                 .ToList();
         }
 
+        private List<InstalledMod> GetArenaSlotCatalogue(
+            string? excludedModId = null)
+        {
+            return _settings.InstalledMods
+                .Where(mod =>
+                    mod.IsArenaSlotMod &&
+                    Directory.Exists(mod.InstallDirectory) &&
+                    !string.Equals(
+                        mod.Id,
+                        excludedModId,
+                        StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        private bool IsArenaSlotLoaderReady(
+            string gameDirectory)
+        {
+            return GetArenaSlotCatalogue().Count == 0 ||
+                   _arenaSlotLoaderService
+                       .Inspect(gameDirectory)
+                       .IsInstalled;
+        }
+
+        private void EnsureArenaSlotLoaderIfNeeded(
+            string gameDirectory)
+        {
+            if (GetArenaSlotCatalogue().Count > 0)
+            {
+                _arenaSlotLoaderService.EnsureInstalled(
+                    gameDirectory);
+            }
+        }
+
         private List<InstalledMod> GetEnabledConventionalMods(
             string? excludedModId = null)
         {
@@ -2684,10 +2790,22 @@ namespace Limelight
             InstalledMod? activeMod,
             IReadOnlyCollection<InstalledMod> characterSlotCatalogue,
             string gameDirectory,
-            IReadOnlyCollection<InstalledMod>? enabledConventionalMods = null)
+            IReadOnlyCollection<InstalledMod>? enabledConventionalMods = null,
+            string? excludedArenaSlotModId = null)
         {
+            List<InstalledMod> arenaSlotCatalogue =
+                GetArenaSlotCatalogue(
+                    excludedArenaSlotModId);
+
+            if (arenaSlotCatalogue.Count > 0)
+            {
+                EnsureArenaSlotLoaderIfNeeded(
+                    gameDirectory);
+            }
+
             List<InstalledMod> companionMods =
                 characterSlotCatalogue
+                    .Concat(arenaSlotCatalogue)
                     .Concat(
                         enabledConventionalMods ??
                         GetEnabledConventionalMods())
@@ -2720,6 +2838,7 @@ namespace Limelight
                 (string.IsNullOrWhiteSpace(
                      _settings.PendingDeploymentModId) &&
                  !_settings.CharacterSlotCatalogueNeedsSynchronization &&
+                 !_settings.ArenaSlotCatalogueNeedsSynchronization &&
                  !_settings.ConventionalModsNeedSynchronization) ||
                 string.IsNullOrWhiteSpace(
                     _gameDirectory) ||
@@ -2750,7 +2869,8 @@ namespace Limelight
 
                 _settingsService.Save(_settings);
 
-                if (!_settings.CharacterSlotCatalogueNeedsSynchronization)
+                if (!_settings.CharacterSlotCatalogueNeedsSynchronization &&
+                    !_settings.ArenaSlotCatalogueNeedsSynchronization)
                 {
                     return;
                 }
@@ -2788,6 +2908,9 @@ namespace Limelight
                     string.Empty;
 
                 _settings.CharacterSlotCatalogueNeedsSynchronization =
+                    false;
+
+                _settings.ArenaSlotCatalogueNeedsSynchronization =
                     false;
 
                 _settings.ConventionalModsNeedSynchronization =
@@ -2871,6 +2994,9 @@ namespace Limelight
 
                     _stagehandPayloadService.EnsureInstalled(
                         currentInstallation);
+
+                    EnsureArenaSlotLoaderIfNeeded(
+                        gameDirectory);
                 }
                 catch
                 {
@@ -2887,7 +3013,8 @@ namespace Limelight
      _nativeBridgeInstallerService.IsCurrentVersionInstalled(
          currentInstallation) &&
      _stagehandPayloadService.IsCurrentVersionInstalled(
-         currentInstallation))
+         currentInstallation) &&
+     IsArenaSlotLoaderReady(gameDirectory))
             {
                 if (!isGameRunning)
                 {
@@ -3053,6 +3180,9 @@ namespace Limelight
                 _stagehandPayloadService.EnsureInstalled(
                     installedLoader);
 
+                EnsureArenaSlotLoaderIfNeeded(
+                    gameDirectory);
+
                 if (!_nativeBridgeInstallerService.IsCurrentVersionInstalled(
                         installedLoader))
                 {
@@ -3065,6 +3195,12 @@ namespace Limelight
                 {
                     throw new InvalidOperationException(
                         "The Limelight Stagehand runtime could not be verified.");
+                }
+
+                if (!IsArenaSlotLoaderReady(gameDirectory))
+                {
+                    throw new InvalidOperationException(
+                        "The Limelight Arena Slot Loader could not be verified.");
                 }
 
                 _settings.DismissedLiveLoaderPromptForGameDirectory =
@@ -4882,6 +5018,12 @@ namespace Limelight
 
                     _settings.ConventionalModsNeedSynchronization =
                         false;
+
+                    _settings.CharacterSlotCatalogueNeedsSynchronization =
+                        false;
+
+                    _settings.ArenaSlotCatalogueNeedsSynchronization =
+                        false;
                 }
 
                 _settingsService.Save(_settings);
@@ -4949,6 +5091,17 @@ namespace Limelight
 
             string gameDirectory =
                 _gameDirectory;
+
+            if (selectedMod.IsArenaSlotMod)
+            {
+                ShowNotification(
+                    "ARENA SLOT SUPPORTED",
+                    $"{selectedMod.DisplayName} is managed through Infinite Disco's arena catalogue and does not need to be activated here.",
+                    isError: false);
+
+                _isX19SwitchRequest = false;
+                return;
+            }
 
             if (selectedMod.IsConventionalMod)
             {
@@ -5066,6 +5219,9 @@ namespace Limelight
                         string.Empty;
 
                     _settings.CharacterSlotCatalogueNeedsSynchronization =
+                        false;
+
+                    _settings.ArenaSlotCatalogueNeedsSynchronization =
                         false;
                 }
                 else if (isGameRunning)
@@ -5204,6 +5360,9 @@ namespace Limelight
                         string.Empty;
 
                     _settings.CharacterSlotCatalogueNeedsSynchronization =
+                        false;
+
+                    _settings.ArenaSlotCatalogueNeedsSynchronization =
                         false;
                 }
 
@@ -5677,17 +5836,22 @@ namespace Limelight
 
             if ((isCurrentlyActive ||
                  selectedMod.IsCharacterSlotMod ||
+                 selectedMod.IsArenaSlotMod ||
                  isEnabledConventional) &&
                 isGameRunning)
             {
                 ShowLimelightDialog(
                     selectedMod.IsCharacterSlotMod
                         ? "CHARACTER SLOT IS IN USE"
+                        : selectedMod.IsArenaSlotMod
+                            ? "ARENA SLOT IS IN USE"
                         : isEnabledConventional
                             ? "ENABLED MOD IS IN USE"
                             : "ACTIVE MOD IS IN USE",
                     selectedMod.IsCharacterSlotMod
                         ? "Close Dead as Disco before removing this Character Slot. Unreal loaded its catalogue files when the game started."
+                        : selectedMod.IsArenaSlotMod
+                            ? "Close Dead as Disco before removing this Arena Slot. Infinite Disco loaded its arena definition when the game started."
                         : isEnabledConventional
                             ? "Close Dead as Disco before removing this enabled replacement. Unreal loaded it when the game started."
                             : "Close Dead as Disco before removing the active mod from Limelight.",
@@ -5727,25 +5891,41 @@ namespace Limelight
                     string gameDirectory =
                         _gameDirectory;
 
-                    // I update ~mods before deleting the library copy. That
-                    // gives the departing slot a clean exit and keeps its cast.
+                    // I update ~mods before deleting the library copy so no
+                    // departed slot leaves a manifest or container behind.
                     await Task.Run(() =>
                         SynchronizeModDeployment(
                             activeModAfterRemoval,
                             characterSlotCatalogue,
                             gameDirectory,
-                            conventionalModsAfterRemoval));
+                            conventionalModsAfterRemoval,
+                            selectedMod.IsArenaSlotMod
+                                ? selectedMod.Id
+                                : null));
 
                     _settings.CharacterSlotCatalogueNeedsSynchronization =
+                        false;
+
+                    _settings.ArenaSlotCatalogueNeedsSynchronization =
                         false;
 
                     _settings.ConventionalModsNeedSynchronization =
                         false;
                 }
-                else if (selectedMod.IsCharacterSlotMod)
+                else if (selectedMod.IsCharacterSlotMod ||
+                         selectedMod.IsArenaSlotMod)
                 {
-                    _settings.CharacterSlotCatalogueNeedsSynchronization =
-                        true;
+                    if (selectedMod.IsCharacterSlotMod)
+                    {
+                        _settings.CharacterSlotCatalogueNeedsSynchronization =
+                            true;
+                    }
+
+                    if (selectedMod.IsArenaSlotMod)
+                    {
+                        _settings.ArenaSlotCatalogueNeedsSynchronization =
+                            true;
+                    }
                 }
 
                 if (isCurrentlyActive ||
@@ -7100,6 +7280,9 @@ namespace Limelight
 
                     _stagehandPayloadService.EnsureInstalled(
                         loader);
+
+                    EnsureArenaSlotLoaderIfNeeded(
+                        gameDirectory);
                 });
 
                 UpdateGameRunningStatus();
@@ -7198,6 +7381,9 @@ namespace Limelight
                     string.Empty;
 
                 _settings.CharacterSlotCatalogueNeedsSynchronization =
+                    false;
+
+                _settings.ArenaSlotCatalogueNeedsSynchronization =
                     false;
 
                 _settings.EnabledConventionalModIds.Clear();
@@ -7813,9 +7999,21 @@ namespace Limelight
                         false;
                 }
 
+                if (installedMod.IsArenaSlotMod)
+                {
+                    // I deploy every arena slot together so duplicate IDs can
+                    // never depend on which library card was touched last.
+                    _settings.ArenaSlotCatalogueNeedsSynchronization =
+                        true;
+
+                    _pendingDeploymentAttempted =
+                        false;
+                }
+
                 _settingsService.Save(_settings);
 
-                if (installedMod.IsCharacterSlotMod)
+                if (installedMod.IsCharacterSlotMod ||
+                    installedMod.IsArenaSlotMod)
                 {
                     await ApplyPendingDeploymentIfPossible();
                 }
@@ -7835,6 +8033,13 @@ namespace Limelight
                               (_settings.CharacterSlotCatalogueNeedsSynchronization
                                   ? "Locker slot: ready on the next game launch"
                                   : "Locker slot: added to the appearance catalogue")
+                            : installedMod.IsArenaSlotMod
+                                ? $"Format: Arena Slot Loader ({installedMod.ArenaSlotName})\n" +
+                                  $"Arena ID: {installedMod.ArenaSlotId}\n" +
+                                  $"Map: {installedMod.ArenaSlotMapPackagePath}\n" +
+                                  (_settings.ArenaSlotCatalogueNeedsSynchronization
+                                      ? "Arena slot: ready on the next game launch"
+                                      : "Arena slot: added to Infinite Disco")
                             : "Live-refreshable: " +
                               $"{installedMod.AssetPackages.Count(package => package.IsSafeForLiveReload)}"),
                     eyebrow: "READY FOR THE SPOTLIGHT");
@@ -8576,7 +8781,8 @@ namespace Limelight
                         !_ue4ssConfigurationService.IsConfigured(loader) ||
                         !_liveLoaderBridgeService.IsInstalled(loader) ||
                         !_nativeBridgeInstallerService.IsCurrentVersionInstalled(loader) ||
-                        !_stagehandPayloadService.IsCurrentVersionInstalled(loader))
+                        !_stagehandPayloadService.IsCurrentVersionInstalled(loader) ||
+                        !IsArenaSlotLoaderReady(gameDirectory))
                     {
                         throw new InvalidOperationException(
                             "The Live Loader needs to be repaired before this launch. " +
@@ -8837,3 +9043,4 @@ namespace Limelight
         }
     }
 }
+

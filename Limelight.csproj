@@ -81,4 +81,18 @@
     <EmbeddedResource Include="Payloads\CharacterLoader\LimelightCharacterLoader.ucas" LogicalName="Limelight.Payloads.CharacterLoader.LimelightCharacterLoader.ucas" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Payloads\ArenaSlotLoader\LimelightArenaSlotLoader.pak" />
+    <None Remove="Payloads\ArenaSlotLoader\LimelightArenaSlotLoader.utoc" />
+    <None Remove="Payloads\ArenaSlotLoader\LimelightArenaSlotLoader.ucas" />
+    <None Remove="Payloads\ArenaSlotLoader\main.lua" />
+    <None Remove="Payloads\ArenaSlotLoader\arena_slot_loader\json.lua" />
+
+    <EmbeddedResource Include="Payloads\ArenaSlotLoader\LimelightArenaSlotLoader.pak" LogicalName="Limelight.Payloads.ArenaSlotLoader.LimelightArenaSlotLoader.pak" />
+    <EmbeddedResource Include="Payloads\ArenaSlotLoader\LimelightArenaSlotLoader.utoc" LogicalName="Limelight.Payloads.ArenaSlotLoader.LimelightArenaSlotLoader.utoc" />
+    <EmbeddedResource Include="Payloads\ArenaSlotLoader\LimelightArenaSlotLoader.ucas" LogicalName="Limelight.Payloads.ArenaSlotLoader.LimelightArenaSlotLoader.ucas" />
+    <EmbeddedResource Include="Payloads\ArenaSlotLoader\main.lua" LogicalName="Limelight.Payloads.ArenaSlotLoader.main.lua" />
+    <EmbeddedResource Include="Payloads\ArenaSlotLoader\arena_slot_loader\json.lua" LogicalName="Limelight.Payloads.ArenaSlotLoader.json.lua" />
+  </ItemGroup>
+
 </Project>

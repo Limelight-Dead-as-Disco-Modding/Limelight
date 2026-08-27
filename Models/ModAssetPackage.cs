@@ -12,7 +12,8 @@ namespace Limelight.Models
         AnimationBlueprint,
         SkeletalMesh,
         StringTable,
-        UserInterfaceTexture
+        UserInterfaceTexture,
+        Map
     }
 
     public sealed class ModAssetPackage
