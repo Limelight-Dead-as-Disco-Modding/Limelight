@@ -6,80 +6,63 @@
              FontFamily="Bahnschrift, Segoe UI">
 
     <UserControl.Resources>
-        <!-- I keep every settings card on the same visual foundation. Status colours
-             belong inside the card, rather than changing the card itself. -->
-        <Style x:Key="SettingsCardStyle"
-               TargetType="Border">
-            <Setter Property="Margin" Value="0,0,0,16"/>
-            <Setter Property="Padding" Value="24"/>
+        <!-- I keep status colour inside each card so the page structure stays calm and predictable. -->
+        <Style x:Key="SettingsCardStyle" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,0,14"/>
+            <Setter Property="Padding" Value="22"/>
             <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="11"/>
         </Style>
 
-        <Style x:Key="SettingsTabItemStyle"
-               TargetType="TabItem">
+        <Style x:Key="SettingsCategoryTabItemStyle" TargetType="TabItem">
             <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="Padding" Value="18,11"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="16,13"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
-                        <Grid Margin="0,0,10,0"
-                              ClipToBounds="False">
-                            <Border x:Name="TabSurface"
-                                    Padding="{TemplateBinding Padding}"
-                                    Background="{StaticResource RaisedPanelBrush}"
-                                    BorderBrush="{StaticResource BorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8">
-                                <StackPanel Orientation="Horizontal">
-                                    <Border x:Name="TabDiamond"
-                                        Width="8"
-                                        Height="8"
-                                        Margin="1,0,12,0"
+                        <Border x:Name="CategorySurface"
+                                Padding="{TemplateBinding Padding}"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3"/>
+                                    <ColumnDefinition Width="13"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border x:Name="CategoryMarker"
+                                        Width="3"
+                                        Height="22"
                                         VerticalAlignment="Center"
                                         Background="Transparent"
-                                        BorderBrush="{StaticResource MutedTextBrush}"
-                                        BorderThickness="1"
-                                        RenderTransformOrigin="0.5,0.5">
-                                        <Border.RenderTransform>
-                                            <RotateTransform Angle="45"/>
-                                        </Border.RenderTransform>
-                                    </Border>
-                                    <ContentPresenter ContentSource="Header"
-                                                      VerticalAlignment="Center"
-                                                      RecognizesAccessKey="True"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                                        CornerRadius="2"/>
+
+                                <ContentPresenter Grid.Column="2"
+                                                  VerticalAlignment="Center"
+                                                  ContentSource="Header"
+                                                  RecognizesAccessKey="True"/>
+                            </Grid>
+                        </Border>
 
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TabSurface"
-                                        Property="Background"
-                                        Value="#1D2138"/>
-                                <Setter Property="Foreground"
-                                        Value="{StaticResource TextBrush}"/>
+                                <Setter TargetName="CategorySurface" Property="Background" Value="#191D31"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabSurface"
-                                        Property="Background"
-                                        Value="#2A2141"/>
-                                <Setter TargetName="TabSurface"
-                                        Property="BorderBrush"
-                                        Value="{StaticResource PinkBrush}"/>
-                                <Setter TargetName="TabDiamond"
-                                        Property="Background"
-                                        Value="{StaticResource PinkBrush}"/>
-                                <Setter TargetName="TabDiamond"
-                                        Property="BorderBrush"
-                                        Value="{StaticResource PinkBrush}"/>
-                                <Setter Property="Foreground"
-                                        Value="{StaticResource TextBrush}"/>
+                                <Setter TargetName="CategorySurface" Property="Background" Value="#252038"/>
+                                <Setter TargetName="CategorySurface" Property="BorderBrush" Value="#46345D"/>
+                                <Setter TargetName="CategoryMarker" Property="Background" Value="{StaticResource PinkBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -87,25 +70,65 @@
             </Setter>
         </Style>
 
-        <Style x:Key="SettingsTabControlStyle"
-               TargetType="TabControl">
+        <!-- I keep the categories visible so changing sections never shifts the page around. -->
+        <Style x:Key="SettingsCategoryTabControlStyle" TargetType="TabControl">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="TabStripPlacement" Value="Left"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabControl">
                         <Grid KeyboardNavigation.TabNavigation="Local">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="210"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                            <TabPanel Grid.Row="0"
-                                      IsItemsHost="True"
-                                      KeyboardNavigation.TabIndex="1"/>
+                            <Border Background="#0E1120"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                            <ContentPresenter Grid.Row="1"
-                                              Margin="0,18,0,0"
+                                    <StackPanel Margin="20,22,20,10">
+                                        <TextBlock Text="PREFERENCES"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource CyanBrush}"/>
+                                        <TextBlock Text="SETTINGS"
+                                                   Margin="0,5,0,0"
+                                                   FontSize="22"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="Tune Limelight without digging through long menus."
+                                                   Margin="0,8,0,0"
+                                                   FontSize="11"
+                                                   LineHeight="17"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{StaticResource MutedTextBrush}"/>
+                                    </StackPanel>
+
+                                    <TabPanel Grid.Row="1"
+                                              Margin="12,12,12,4"
+                                              IsItemsHost="True"
+                                              KeyboardNavigation.TabIndex="1"/>
+
+                                    <TextBlock Grid.Row="2"
+                                               Text="LIMELIGHT EARLY ACCESS"
+                                               Margin="20,12,20,20"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="#636B91"/>
+                                </Grid>
+                            </Border>
+
+                            <ContentPresenter x:Name="PART_SelectedContentHost"
+                                              Grid.Column="2"
                                               ContentSource="SelectedContent"
                                               KeyboardNavigation.TabIndex="2"/>
                         </Grid>
@@ -114,8 +137,7 @@
             </Setter>
         </Style>
 
-        <Style x:Key="ResourceOverlayToggleStyle"
-               TargetType="ToggleButton">
+        <Style x:Key="ResourceOverlayToggleStyle" TargetType="ToggleButton">
             <Setter Property="Width" Value="62"/>
             <Setter Property="Height" Value="32"/>
             <Setter Property="Background" Value="#0D1020"/>
@@ -139,23 +161,13 @@
 
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ToggleTrack"
-                                        Property="BorderBrush"
-                                        Value="{StaticResource PinkBrush}"/>
+                                <Setter TargetName="ToggleTrack" Property="BorderBrush" Value="{StaticResource PinkBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ToggleTrack"
-                                        Property="Background"
-                                        Value="#12313B"/>
-                                <Setter TargetName="ToggleTrack"
-                                        Property="BorderBrush"
-                                        Value="{StaticResource CyanBrush}"/>
-                                <Setter TargetName="ToggleThumb"
-                                        Property="HorizontalAlignment"
-                                        Value="Right"/>
-                                <Setter TargetName="ToggleThumb"
-                                        Property="Fill"
-                                        Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="ToggleTrack" Property="Background" Value="#12313B"/>
+                                <Setter TargetName="ToggleTrack" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                <Setter TargetName="ToggleThumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="ToggleThumb" Property="Fill" Value="{StaticResource CyanBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -164,108 +176,36 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="38,30,26,0">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <StackPanel>
-            <TextBlock FontSize="12"
-                       FontWeight="Bold"
-                       Foreground="{StaticResource CyanBrush}">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Text" Value="SETTINGS / GENERAL"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="1">
-                                <Setter Property="Text" Value="SETTINGS / LIVE LOADER"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="2">
-                                <Setter Property="Text" Value="SETTINGS / NEXUS MODS"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="2">
-                                <Setter Property="Text" Value="SETTINGS / SUPPORT"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-
-            <TextBlock Margin="0,5,0,0"
-                       FontSize="27"
-                       FontWeight="Bold">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Text" Value="EVERYDAY PREFERENCES"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="1">
-                                <Setter Property="Text" Value="CONTROL THE LIVE SHOW"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="2">
-                                <Setter Property="Text" Value="CONNECT TO THE CATALOGUE"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="2">
-                                <Setter Property="Text" Value="RECOVERY AND DIAGNOSTICS"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-
-            <TextBlock Margin="0,8,0,0"
-                       FontSize="13"
-                       TextWrapping="Wrap"
-                       Foreground="{StaticResource MutedTextBrush}">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Text"
-                                Value="Manage the connected game, Discord activity, and Limelight's optional resource display."/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="1">
-                                <Setter Property="Text"
-                                        Value="Configure X19 rotation controls and keep an eye on the current live session."/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="2">
-                                <Setter Property="Text"
-                                        Value="Manage Nexus testing access, account details, catalogue limits, and request activity."/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=SettingsCategoryTabs}"
-                                         Value="2">
-                                <Setter Property="Text"
-                                        Value="Repair managed loader files, verify the native bridge, or prepare a private diagnostic report."/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-        </StackPanel>
-
+    <Grid Margin="34,28,26,0">
         <TabControl x:Name="SettingsCategoryTabs"
-                    Grid.Row="1"
-                    Margin="0,24,0,0"
                     SelectedIndex="0"
-                    Style="{StaticResource SettingsTabControlStyle}">
+                    Style="{StaticResource SettingsCategoryTabControlStyle}">
 
-            <!-- General keeps the everyday choices together. -->
-            <TabItem Header="GENERAL"
-                     Style="{StaticResource SettingsTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+            <TabItem Header="GENERAL" Style="{StaticResource SettingsCategoryTabItemStyle}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
                               Style="{StaticResource PageTransitionStyle}">
                     <ScrollViewer.Resources>
-                        <Style TargetType="ScrollBar"
-                               BasedOn="{StaticResource NexusVerticalScrollBarStyle}"/>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource NexusVerticalScrollBarStyle}"/>
                     </ScrollViewer.Resources>
 
                     <StackPanel Margin="0,0,12,30">
+                        <StackPanel Margin="0,0,0,22">
+                            <TextBlock Text="SETTINGS / GENERAL"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Text="EVERYDAY PREFERENCES"
+                                       Margin="0,5,0,0"
+                                       FontSize="27"
+                                       FontWeight="Bold"/>
+                            <TextBlock Text="Manage the connected game and the small ways Limelight can appear outside its main window."
+                                       Margin="0,8,0,0"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource MutedTextBrush}"/>
+                        </StackPanel>
+
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -275,26 +215,26 @@
 
                                 <StackPanel>
                                     <TextBlock Text="GAME CONNECTION"
-                                               FontSize="12"
-                                               FontWeight="Bold"/>
-
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource MutedTextBrush}"/>
                                     <TextBlock x:Name="GameConnectionStatusText"
                                                Text="NOT CONNECTED"
-                                               Margin="0,10,0,0"
-                                               FontSize="18"
+                                               Margin="0,8,0,0"
+                                               FontSize="19"
                                                FontWeight="Bold"
                                                Foreground="{StaticResource PinkBrush}"/>
-
                                     <TextBlock x:Name="GameConnectionDetailText"
                                                Text="Choose the Dead as Disco installation folder."
-                                               Margin="0,7,20,0"
+                                               Margin="0,7,24,0"
+                                               MaxWidth="720"
+                                               HorizontalAlignment="Left"
                                                FontSize="12"
                                                TextWrapping="Wrap"
                                                Foreground="{StaticResource MutedTextBrush}"/>
-
                                     <Button x:Name="ChangeGameFolderButton"
                                             Content="CHANGE GAME FOLDER"
-                                            Margin="0,16,0,0"
+                                            Margin="0,15,0,0"
                                             HorizontalAlignment="Left"
                                             Click="ChangeGameFolderButton_Click"
                                             Style="{StaticResource SecondaryButton}"/>
@@ -303,119 +243,127 @@
                                 <Border Grid.Column="1"
                                         Padding="13,8"
                                         VerticalAlignment="Top"
-                                        Background="#1A1E35"
+                                        Background="{StaticResource RaisedPanelBrush}"
                                         BorderBrush="{StaticResource BorderBrush}"
                                         BorderThickness="1"
                                         CornerRadius="8">
                                     <TextBlock x:Name="GameRunningBadgeText"
                                                Text="NOT RUNNING"
-                                               FontSize="11"
+                                               FontSize="10"
                                                FontWeight="Bold"
                                                Foreground="{StaticResource PinkBrush}"/>
                                 </Border>
                             </Grid>
                         </Border>
 
-                        <!-- Rich Presence is opt-in because Discord activity is visible to other people. -->
-                        <Border Style="{StaticResource SettingsCardStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="14"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="DISCORD RICH PRESENCE"
-                                               FontSize="12"
-                                               FontWeight="Bold"/>
+                            <Border Grid.Column="0" Style="{StaticResource SettingsCardStyle}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                                    <TextBlock x:Name="DiscordPresenceStatusText"
-                                               Text="PRIVATE"
-                                               Margin="0,10,0,0"
-                                               FontSize="18"
-                                               FontWeight="Bold"
-                                               Foreground="{StaticResource PinkBrush}"/>
+                                    <StackPanel>
+                                        <TextBlock Text="DISCORD ACTIVITY"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource MutedTextBrush}"/>
+                                        <TextBlock x:Name="DiscordPresenceStatusText"
+                                                   Text="PRIVATE"
+                                                   Margin="0,8,0,0"
+                                                   FontSize="17"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource PinkBrush}"/>
+                                        <TextBlock x:Name="DiscordPresenceDetailText"
+                                                   Text="Share Limelight and current game activity on your Discord profile."
+                                                   Margin="0,8,0,0"
+                                                   FontSize="12"
+                                                   LineHeight="18"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{StaticResource MutedTextBrush}"/>
+                                    </StackPanel>
 
-                                    <TextBlock x:Name="DiscordPresenceDetailText"
-                                               Text="Enable this to share Limelight, game, active-mod, X19, and multiplayer activity on your Discord profile."
-                                               Margin="0,7,24,0"
-                                               MaxWidth="720"
-                                               FontSize="12"
-                                               LineHeight="18"
-                                               TextWrapping="Wrap"
-                                               Foreground="{StaticResource MutedTextBrush}"/>
-                                </StackPanel>
+                                    <Button x:Name="DiscordPresenceButton"
+                                            Grid.Row="1"
+                                            Content="ENABLE PRESENCE"
+                                            Margin="0,16,0,0"
+                                            HorizontalAlignment="Left"
+                                            Click="DiscordPresenceButton_Click"
+                                            Style="{StaticResource SecondaryButton}"/>
+                                </Grid>
+                            </Border>
 
-                                <Button x:Name="DiscordPresenceButton"
-                                        Grid.Column="1"
-                                        Content="ENABLE PRESENCE"
-                                        MinWidth="156"
-                                        VerticalAlignment="Center"
-                                        Click="DiscordPresenceButton_Click"
-                                        Style="{StaticResource SecondaryButton}"/>
-                            </Grid>
-                        </Border>
+                            <Border Grid.Column="2" Style="{StaticResource SettingsCardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                        <Border Style="{StaticResource SettingsCardStyle}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,18,0">
+                                        <TextBlock Text="RESOURCE DISPLAY"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource MutedTextBrush}"/>
+                                        <TextBlock x:Name="ResourceOverlayStatusText"
+                                                   Text="DISABLED"
+                                                   Margin="0,8,0,0"
+                                                   FontSize="17"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource PinkBrush}"/>
+                                        <TextBlock Text="Show Limelight's compact performance and resource overlay."
+                                                   Margin="0,8,0,0"
+                                                   FontSize="12"
+                                                   LineHeight="18"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{StaticResource MutedTextBrush}"/>
+                                    </StackPanel>
 
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="RESOURCE OVERLAY"
-                                               FontSize="12"
-                                               FontWeight="Bold"/>
-
-                                    <TextBlock x:Name="ResourceOverlayStatusText"
-                                               Text="DISABLED"
-                                               Margin="0,10,0,0"
-                                               FontSize="18"
-                                               FontWeight="Bold"
-                                               Foreground="{StaticResource PinkBrush}"/>
-
-                                    <TextBlock Text="Show a small, translucent Limelight panel with this application's current memory usage. It is disabled by default and never displays data from other applications."
-                                               Margin="0,7,24,0"
-                                               MaxWidth="760"
-                                               FontSize="12"
-                                               LineHeight="18"
-                                               TextWrapping="Wrap"
-                                               Foreground="{StaticResource MutedTextBrush}"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1"
-                                            Margin="24,0,0,0"
-                                            VerticalAlignment="Center"
-                                            HorizontalAlignment="Center">
                                     <ToggleButton x:Name="ResourceOverlayToggleButton"
+                                                  Grid.Column="1"
                                                   IsChecked="False"
                                                   Checked="ResourceOverlayToggleButton_Changed"
                                                   Unchecked="ResourceOverlayToggleButton_Changed"
                                                   Style="{StaticResource ResourceOverlayToggleStyle}"/>
-                                    <TextBlock Text="OFF BY DEFAULT"
-                                               Margin="0,8,0,0"
-                                               HorizontalAlignment="Center"
-                                               FontSize="9"
-                                               FontWeight="Bold"
-                                               Foreground="{StaticResource MutedTextBrush}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="LIVE LOADER"
-                     Style="{StaticResource SettingsTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+            <TabItem Header="LIVE LOADER" Style="{StaticResource SettingsCategoryTabItemStyle}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
                               Style="{StaticResource PageTransitionStyle}">
                     <ScrollViewer.Resources>
-                        <Style TargetType="ScrollBar"
-                               BasedOn="{StaticResource NexusVerticalScrollBarStyle}"/>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource NexusVerticalScrollBarStyle}"/>
                     </ScrollViewer.Resources>
 
                     <StackPanel Margin="0,0,12,30">
+                        <StackPanel Margin="0,0,0,22">
+                            <TextBlock Text="SETTINGS / LIVE LOADER"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Text="THE CURRENT SHOW"
+                                       Margin="0,5,0,0"
+                                       FontSize="27"
+                                       FontWeight="Bold"/>
+                            <TextBlock Text="A clear view of the active session, mounted containers, and cleanup waiting backstage."
+                                       Margin="0,8,0,0"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource MutedTextBrush}"/>
+                        </StackPanel>
+
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <StackPanel>
                                 <Grid>
@@ -426,13 +374,13 @@
 
                                     <StackPanel>
                                         <TextBlock Text="LIVE SESSION"
-                                                   FontSize="12"
-                                                   FontWeight="Bold"/>
-
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource MutedTextBrush}"/>
                                         <TextBlock x:Name="SessionStatusText"
                                                    Text="IDLE"
-                                                   Margin="0,10,0,0"
-                                                   FontSize="18"
+                                                   Margin="0,8,0,0"
+                                                   FontSize="22"
                                                    FontWeight="Bold"
                                                    Foreground="{StaticResource PinkBrush}"/>
                                     </StackPanel>
@@ -440,47 +388,82 @@
                                     <Border Grid.Column="1"
                                             Padding="13,8"
                                             VerticalAlignment="Top"
-                                            Background="#1A1E35"
+                                            Background="{StaticResource RaisedPanelBrush}"
                                             BorderBrush="{StaticResource BorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8">
                                         <TextBlock x:Name="MountedContainerText"
                                                    Text="0 MOUNTED • AUTO-RECYCLE"
-                                                   FontSize="11"
+                                                   FontSize="10"
                                                    FontWeight="Bold"
                                                    Foreground="{StaticResource CyanBrush}"/>
                                     </Border>
                                 </Grid>
 
                                 <TextBlock x:Name="SessionDetailText"
-                                           Text="Start the game to begin a live session."
-                                           Margin="0,10,0,0"
+                                           Text="Start the game to begin a fresh live session."
+                                           Margin="0,14,0,0"
                                            FontSize="13"
+                                           LineHeight="20"
                                            TextWrapping="Wrap"
                                            Foreground="{StaticResource MutedTextBrush}"/>
 
-                                <TextBlock x:Name="StagingText"
-                                           Text="No staged files are waiting for cleanup."
-                                           Margin="0,7,0,0"
-                                           FontSize="12"
-                                           TextWrapping="Wrap"
-                                           Foreground="{StaticResource MutedTextBrush}"/>
+                                <Border Margin="0,18,0,0"
+                                        Padding="15,12"
+                                        Background="#101426"
+                                        BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="CLEANUP"
+                                                   Margin="0,0,16,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource CyanBrush}"/>
+                                        <TextBlock x:Name="StagingText"
+                                                   Grid.Column="1"
+                                                   Text="No staged files are waiting for cleanup."
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{StaticResource MutedTextBrush}"/>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="SUPPORT"
-                     Style="{StaticResource SettingsTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+            <TabItem Header="SUPPORT" Style="{StaticResource SettingsCategoryTabItemStyle}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
                               Style="{StaticResource PageTransitionStyle}">
                     <ScrollViewer.Resources>
-                        <Style TargetType="ScrollBar"
-                               BasedOn="{StaticResource NexusVerticalScrollBarStyle}"/>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource NexusVerticalScrollBarStyle}"/>
                     </ScrollViewer.Resources>
 
                     <StackPanel Margin="0,0,12,30">
+                        <StackPanel Margin="0,0,0,22">
+                            <TextBlock Text="SETTINGS / SUPPORT"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock Text="RECOVERY AND DIAGNOSTICS"
+                                       Margin="0,5,0,0"
+                                       FontSize="27"
+                                       FontWeight="Bold"/>
+                            <TextBlock Text="Check compatibility, prepare useful reports, and repair the parts Limelight manages."
+                                       Margin="0,8,0,0"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource MutedTextBrush}"/>
+                        </StackPanel>
+
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -489,64 +472,59 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel>
-                                    <TextBlock Text="LOCAL COMPATIBILITY"
-                                               FontSize="12"
+                                    <TextBlock Text="GAME COMPATIBILITY"
+                                               FontSize="11"
                                                FontWeight="Bold"
-                                               Foreground="{StaticResource CyanBrush}"/>
-
+                                               Foreground="{StaticResource MutedTextBrush}"/>
                                     <TextBlock x:Name="CompatibilityUpdateTitleText"
                                                Text="CURRENT DEAD AS DISCO UPDATE"
-                                               Margin="0,9,0,0"
-                                               FontSize="22"
-                                               FontWeight="ExtraBold"
-                                               TextWrapping="Wrap"/>
-
-                                    <TextBlock x:Name="CompatibilityDetailText"
-                                               Text="Connect Dead as Disco to check Live Loader readiness."
-                                               MaxWidth="720"
                                                Margin="0,8,0,0"
+                                               FontSize="19"
+                                               FontWeight="Bold"/>
+                                    <TextBlock x:Name="CompatibilityDetailText"
+                                               Text="Compatibility has not been checked yet."
+                                               Margin="0,8,28,0"
+                                               MaxWidth="760"
                                                HorizontalAlignment="Left"
-                                               FontSize="13"
-                                               LineHeight="21"
+                                               FontSize="12"
+                                               LineHeight="18"
                                                TextWrapping="Wrap"
                                                Foreground="{StaticResource MutedTextBrush}"/>
 
-                                    <WrapPanel Margin="0,18,0,0">
+                                    <WrapPanel Margin="0,16,0,0">
                                         <Border Margin="0,0,10,8"
-                                                Padding="12,8"
+                                                Padding="13,9"
                                                 Background="#101426"
                                                 BorderBrush="{StaticResource BorderBrush}"
                                                 BorderThickness="1"
                                                 CornerRadius="7">
                                             <StackPanel>
-                                                <TextBlock Text="UPDATE RELEASED"
+                                                <TextBlock Text="GAME UPDATE"
                                                            FontSize="9"
                                                            FontWeight="Bold"
-                                                           Foreground="{StaticResource MutedTextBrush}"/>
-
+                                                           Foreground="{StaticResource CyanBrush}"/>
                                                 <TextBlock x:Name="CompatibilityReleaseDateText"
                                                            Text="DATE UNAVAILABLE"
-                                                           Margin="0,2,0,0"
+                                                           Margin="0,3,0,0"
                                                            FontSize="11"
                                                            FontWeight="Bold"/>
                                             </StackPanel>
                                         </Border>
 
                                         <Border Margin="0,0,10,8"
-                                                Padding="12,8"
+                                                Padding="13,9"
                                                 Background="#101426"
                                                 BorderBrush="{StaticResource BorderBrush}"
                                                 BorderThickness="1"
                                                 CornerRadius="7">
                                             <StackPanel>
-                                                <TextBlock Text="SUPPORTED BUILD PUBLISHED"
+                                                <TextBlock Text="SUPPORTED BUILD"
                                                            FontSize="9"
                                                            FontWeight="Bold"
-                                                           Foreground="{StaticResource MutedTextBrush}"/>
-
+                                                           Foreground="{StaticResource CyanBrush}"/>
                                                 <TextBlock x:Name="CompatibilityBuildDateText"
                                                            Text="DATE UNAVAILABLE"
-                                                           Margin="0,2,0,0"
+                                                           Margin="0,3,0,0"
                                                            FontSize="11"
                                                            FontWeight="Bold"/>
                                             </StackPanel>
@@ -562,7 +540,6 @@
                                                        FontSize="10"
                                                        FontWeight="Bold"/>
                                         </Expander.Header>
-
                                         <Border MaxWidth="760"
                                                 Margin="0,9,0,0"
                                                 Padding="12,10"
@@ -582,7 +559,6 @@
                                 </StackPanel>
 
                                 <Border Grid.Column="1"
-                                        Margin="24,0,0,0"
                                         Padding="14,8"
                                         VerticalAlignment="Top"
                                         Background="{StaticResource RaisedPanelBrush}"
@@ -591,54 +567,99 @@
                                         CornerRadius="8">
                                     <TextBlock x:Name="CompatibilityStatusText"
                                                Text="NOT CHECKED"
-                                               FontSize="11"
+                                               FontSize="10"
                                                FontWeight="Bold"
                                                Foreground="{StaticResource PinkBrush}"/>
                                 </Border>
                             </Grid>
                         </Border>
 
-                        <Border Style="{StaticResource SettingsCardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="RECOVERY TOOLS"
-                                           FontSize="12"
-                                           FontWeight="Bold"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="14"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="Repair managed loader files, clear every deployed mod from the game, or prepare a private diagnostic report. Recovery actions are only available while the game is closed."
-                                           Margin="0,10,0,0"
-                                           FontSize="13"
-                                           TextWrapping="Wrap"
-                                           Foreground="{StaticResource MutedTextBrush}"/>
+                            <Border Grid.Column="0" Style="{StaticResource SettingsCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="REPORTS AND TESTING"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource MutedTextBrush}"/>
+                                    <TextBlock Text="Package the useful details without exposing personal files."
+                                               Margin="0,8,0,0"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               Foreground="{StaticResource MutedTextBrush}"/>
+                                    <WrapPanel Margin="0,16,0,0">
+                                        <Button Content="CREATE TEST REPORT"
+                                                Margin="0,0,10,10"
+                                                Click="CreatePrivateTestReportButton_Click"
+                                                Style="{StaticResource PrimaryButton}"/>
+                                        <Button Content="EXPORT DIAGNOSTICS"
+                                                Margin="0,0,10,10"
+                                                Click="ExportButton_Click"
+                                                Style="{StaticResource SecondaryButton}"/>
+                                        <Button x:Name="NativeTestButton"
+                                                Content="NATIVE TEST"
+                                                Margin="0,0,0,10"
+                                                Click="NativeTestButton_Click"
+                                                Style="{StaticResource SecondaryButton}"/>
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
 
-                                <WrapPanel Margin="0,18,0,0">
-                                    <Button Content="CREATE TEST REPORT"
-                                            Margin="0,0,12,10"
-                                            Click="CreatePrivateTestReportButton_Click"
-                                            Style="{StaticResource PrimaryButton}"/>
-
+                            <Border Grid.Column="2" Style="{StaticResource SettingsCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="REPAIR LIVE LOADER"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource MutedTextBrush}"/>
+                                    <TextBlock Text="Restore Limelight-managed loader files while the game is closed."
+                                               Margin="0,8,0,0"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               Foreground="{StaticResource MutedTextBrush}"/>
                                     <Button x:Name="RepairButton"
                                             Content="REPAIR LIVE LOADER"
-                                            Margin="0,0,12,10"
+                                            Margin="0,16,0,0"
+                                            HorizontalAlignment="Left"
                                             Click="RepairButton_Click"
                                             Style="{StaticResource PrimaryButton}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
 
-                                    <Button Content="PURGE ALL MODS"
-                                            Margin="0,0,12,10"
-                                            Click="PurgeAllModsButton_Click"
-                                            Style="{StaticResource PrimaryButton}"/>
+                        <Border Padding="22"
+                                Background="#1A101C"
+                                BorderBrush="#60334F"
+                                BorderThickness="1"
+                                CornerRadius="11">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                                    <Button Content="EXPORT DIAGNOSTIC REPORT"
-                                            Margin="0,0,12,10"
-                                            Click="ExportButton_Click"
-                                            Style="{StaticResource SecondaryButton}"/>
+                                <StackPanel Margin="0,0,22,0">
+                                    <TextBlock Text="REMOVE DEPLOYED MODS"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource PinkBrush}"/>
+                                    <TextBlock Text="Purge every mod Limelight has placed in the game. Your managed library is not deleted."
+                                               Margin="0,7,0,0"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               Foreground="{StaticResource MutedTextBrush}"/>
+                                </StackPanel>
 
-                                    <Button x:Name="NativeTestButton"
-                                            Content="NATIVE TEST"
-                                            Margin="0,0,0,10"
-                                            Click="NativeTestButton_Click"
-                                            Style="{StaticResource SecondaryButton}"/>
-                                </WrapPanel>
-                            </StackPanel>
+                                <Button Grid.Column="1"
+                                        Content="PURGE ALL MODS"
+                                        VerticalAlignment="Center"
+                                        Click="PurgeAllModsButton_Click"
+                                        Style="{StaticResource PrimaryButton}"/>
+                            </Grid>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
@@ -646,4 +667,3 @@
         </TabControl>
     </Grid>
 </UserControl>
-

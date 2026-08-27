@@ -29,7 +29,7 @@ namespace Limelight.Views
 
         }
 
-        public void ShowDiscordPresence(        public void ShowDiscordPresence(
+        public void ShowDiscordPresence(
             bool enabled)
         {
             _discordPresenceEnabled =
@@ -55,7 +55,7 @@ namespace Limelight.Views
         }
 
         public void ShowResourceOverlay(
-    bool enabled)
+            bool enabled)
         {
             _isUpdatingResourceOverlay = true;
             _resourceOverlayEnabled = enabled;
@@ -230,7 +230,7 @@ namespace Limelight.Views
 
         public void ShowSupportCategory()
         {
-            SettingsCategoryTabs.SelectedIndex = 3;
+            SettingsCategoryTabs.SelectedIndex = 2;
         }
 
         private string CreateSessionDetail(
