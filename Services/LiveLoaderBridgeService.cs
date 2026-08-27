@@ -1523,7 +1523,7 @@ namespace Limelight.Services
         return definitions
     end
 
-    local function officialCharacterSlotLoaderIsActive()
+    local function externalCharacterSlotRegistrationIsActive()
         local modeFile =
             io.open(characterSlotLoaderModePath, "r")
 
@@ -1537,7 +1537,8 @@ namespace Limelight.Services
                 "^%s*(.-)%s*$")
 
         modeFile:close()
-        return mode == "official"
+        return mode == "official" or
+               mode == "native"
     end
 
     local initialiseCharacterSlotCatalogue
@@ -1555,9 +1556,9 @@ namespace Limelight.Services
             return
         end
 
-        if officialCharacterSlotLoaderIsActive() then
-            -- I let the official script fill the Locker, then remember its
-            -- homework so a live switch does not add the same slot twice.
+        if externalCharacterSlotRegistrationIsActive() then
+            -- I let the selected external owner fill the Locker, then remember
+            -- its homework so a live switch does not add the same slot twice.
             for _, definitionPath in ipairs(definitions) do
                 registeredCharacterSlotDefinitions[
                     definitionPath] = "ready"
@@ -1566,7 +1567,7 @@ namespace Limelight.Services
             characterSlotCatalogueInitialised = true
 
             print(
-                "[LimelightBridge] Official Character Slot catalogue detected; Limelight will not duplicate it.\n")
+                "[LimelightBridge] External Character Slot registration detected; Live Loader will not duplicate it.\n")
 
             return
         end

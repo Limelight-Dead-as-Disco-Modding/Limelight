@@ -172,15 +172,15 @@ namespace Limelight.Services
                     RuntimeCatalogueFilename),
                 definitionPaths);
 
-            // I step aside when the author's own Lua loader is both present
-            // and enabled. One stage manager is charming; two make duplicates.
+            // I give the author's own loader priority, otherwise the Native
+            // Bridge owns registration so Character Slots do not need Live Loader.
             WriteAllTextAtomically(
                 Path.Combine(
                     runtimeDirectory,
                     RuntimeModeFilename),
                 HasEnabledOfficialLuaLoader(gameDirectory)
                     ? "official"
-                    : "limelight");
+                    : "native");
         }
 
         private void InstallPayload(
