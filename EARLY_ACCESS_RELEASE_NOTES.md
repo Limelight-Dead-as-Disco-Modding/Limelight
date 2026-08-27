@@ -43,6 +43,37 @@ mod belonged to Charlie.
 Non-character replacements can now show a useful target such as **DRUMSTICK
 REPLACEMENT** instead of being left as a completely mysterious mod.
 
+## Character Slots now bring their own loader
+
+Limelight now carries and manages its matching Character Loader Logic Mod. A
+user should not need to hunt down a separate download or manually wire together
+the pieces needed for Character Slot support.
+
+- Character Slot metadata is refreshed when Limelight opens.
+- The bundled loader is installed and repaired alongside the rest of the Live Loader.
+- Existing setups using the original CharacterLoader package remain supported when the complete actor payload is present.
+
+## Arena Slot Loader
+
+Custom arenas can now appear beside Infinite Disco's stock arena instead of
+replacing it.
+
+- Limelight recognises complete arena manifests with a unique arena ID, definition, and map.
+- Arena definition and map assets are checked before a package is treated as an Arena Slot.
+- Every Arena Slot is deployed together so duplicate IDs do not depend on import order.
+- Limelight installs and repairs its own shared Arena Slot Loader Logic Mod and UE4SS script.
+- Older arena replacements remain ordinary next-launch mods until their authors give them a complete additive manifest.
+
+## Nexus now behaves like a browser
+
+The Nexus API setup has been removed. Sign in normally inside Limelight's
+embedded browser and use **Manual Download**. Completed ZIP, RAR, and 7Z files
+are passed straight into Limelight's existing archive importer.
+
+Limelight keeps the browser profile and download folder locally, but it does not
+store a Nexus API key or account token. Nexus Mod Manager `nxm://` links are not
+consumed by this version, so Manual Download is the supported route.
+
 ## The Live Loader has been hammered into better shape
 
 The game updated and stopped using the old Charlie mesh during gameplay. That
@@ -86,6 +117,10 @@ all still available.
 LimelightMP remains extremely experimental, but the host and client flow has
 received several travel and recovery improvements.
 
+The bundled payload is now LimelightMP 0.1.4. It includes the new LimelightMP UI
+containers, stronger payload verification, and more client-side travel and
+recovery work.
+
 Both players run their own copy of *Dead as Disco*. The host owns the real couch
 co-op world, while the client sends authenticated input to the host's virtual
 second controller. Unreal then replicates the host-owned world back to the
@@ -101,6 +136,21 @@ up, it stuck, and I refuse to remove the charm.
 LimelightMP is still rough. Cameras, dialogue, rhythm synchronisation, audio,
 player-local menus, replicated effects, and some level transitions remain works
 in progress.
+
+## Stagehand is building the set
+
+The first Stagehand runtime, payload, and Logic Mod packaging groundwork now
+exists inside Limelight. The page is deliberately covered by an under
+construction screen because the experience is not ready for normal use yet.
+
+I would rather call it unfinished than pretend scaffolding is a finished
+feature.
+
+## Settings is cleaner
+
+Settings now uses a permanent General, Live Loader, and Support category rail.
+Compatibility details, reports, repairs, and destructive actions are separated
+so the page reads like a control panel rather than a wall of technical options.
 
 ## Smaller fixes
 
@@ -132,7 +182,8 @@ X19 originally came up with the idea that became X19 Loader Mode.
 
 ## Early Access reminders
 
-- Nexus Mods browsing and direct downloads are still being prepared.
+- Nexus browsing uses a normal embedded browser session; use Manual Download rather than a Mod Manager link.
+- Stagehand is under construction and is not ready for normal use.
 - Live switching depends on how each mod packages its Unreal assets.
 - Some replacements are supported for the next launch but cannot be switched safely at runtime.
 - Game updates can move or change internal assets and temporarily break compatibility.
