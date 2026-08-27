@@ -1,8 +1,8 @@
 local UEHelpers = require("UEHelpers")
 
 local MOD_NAME = "LimelightMPLocalRenderHost"
-local MOD_VERSION = "0.1.0"
-local VERSION_WATERMARK = "LimelightMP_0.1.0 By Henreh <3"
+local MOD_VERSION = "0.1.4"
+local VERSION_WATERMARK = "LimelightMP_0.1.4 By Henreh <3"
 local HOST_MAP = "/Game/Pagoda/Levels/DiveBar/L_DiveBar_V2"
 local INFINITE_DISCO_MAP = "/Game/Pagoda/Levels/InfiniteDisco/L_InfiniteDisco_Persistent"
 local LISTEN_PORT = 7777 -- INSTALL_LISTEN_PORT

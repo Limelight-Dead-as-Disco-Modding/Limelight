@@ -49,12 +49,18 @@
     <None Remove="Payloads\Multiplayer\client.lua" />
     <None Remove="Payloads\Multiplayer\LimelightMPNative.dll" />
     <None Remove="Payloads\Multiplayer\LimelightMPRelay.exe" />
+    <None Remove="Payloads\Multiplayer\LimelightMPUI.pak" />
+    <None Remove="Payloads\Multiplayer\LimelightMPUI.utoc" />
+    <None Remove="Payloads\Multiplayer\LimelightMPUI.ucas" />
     <None Remove="Payloads\Multiplayer\multiplayer-manifest.json" />
 
     <EmbeddedResource Include="Payloads\Multiplayer\host.lua" LogicalName="Limelight.Payloads.Multiplayer.host.lua" />
     <EmbeddedResource Include="Payloads\Multiplayer\client.lua" LogicalName="Limelight.Payloads.Multiplayer.client.lua" />
     <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPNative.dll" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPNative.dll" />
     <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPRelay.exe" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPRelay.exe" />
+    <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPUI.pak" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPUI.pak" />
+    <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPUI.utoc" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPUI.utoc" />
+    <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPUI.ucas" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPUI.ucas" />
     <EmbeddedResource Include="Payloads\Multiplayer\multiplayer-manifest.json" LogicalName="Limelight.Payloads.Multiplayer.multiplayer-manifest.json" />
   </ItemGroup>
 

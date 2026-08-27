@@ -99,6 +99,15 @@ namespace Limelight.Models
 
         public MultiplayerPayloadFile Relay { get; init; } =
             new();
+
+        public MultiplayerPayloadFile UiPak { get; init; } =
+            new();
+
+        public MultiplayerPayloadFile UiUtoc { get; init; } =
+            new();
+
+        public MultiplayerPayloadFile UiUcas { get; init; } =
+            new();
     }
 
     public sealed class MultiplayerPayloadFile

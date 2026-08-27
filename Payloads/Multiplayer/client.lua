@@ -1,9 +1,19 @@
 local UEHelpers = require("UEHelpers")
 
 local MOD_NAME = "LimelightMPLocalRenderClient"
-local MOD_VERSION = "0.1.0"
-local VERSION_WATERMARK = "LimelightMP_0.1.0 By Henreh <3"
+local MOD_VERSION = "0.1.4"
+local VERSION_WATERMARK = "LimelightMP_0.1.4 By Henreh <3"
 local CONNECT_ADDRESS = "127.0.0.1:7777" -- INSTALL_CONNECT_ADDRESS
+-- I keep the curtain on while Unreal changes outfits, but one switch puts the
+-- old honest mess back if a future game build teaches it a new dance.
+local ENABLE_CLIENT_TRAVEL_CURTAIN = true
+-- I let the handmade screen stand in front of the reliable black curtain. If
+-- the asset has a dramatic episode, one switch sends us back to plain black.
+local ENABLE_CLIENT_LOADING_WIDGET = true
+local CLIENT_LOADING_WIDGET_CLASS =
+    "/Game/LimeLightMP/UI/WBP_LimelightMPLoading.WBP_LimelightMPLoading_C"
+local WIDGET_BLUEPRINT_LIBRARY =
+    "/Script/UMG.Default__WidgetBlueprintLibrary"
 
 local joinIssued = false
 local worldTransitioning = false
@@ -744,7 +754,255 @@ local function installHudPresentationHooks()
     end
 end
 
+local clientTravelCurtainHeld = false
+local clientTravelCurtainRecoveryReady = false
+local clientTravelCurtainReadyChecks = 0
+local clientTravelCurtainGeneration = 0
+local clientLoadingWidget = nil
+local clientLoadingWidgetStage = "CONNECTING TO LIMELIGHTMP"
+local clientLoadingWidgetDetail = "KEEPING CHUCKLES ON THE RIGHT SIDE OF REALITY..."
+local clientLoadingWidgetFailureGeneration = -1
+local releaseClientTravelCurtain
+
+local function setClientLoadingText(widget, propertyName, value)
+    local textBlock = readProperty(widget, propertyName)
+    local textLibrary = UEHelpers.GetKismetTextLibrary()
+    if not isValid(textBlock) or not isValid(textLibrary) then
+        return false
+    end
+
+    local ok = pcall(function()
+        textBlock:SetText(textLibrary:Conv_StringToText(value))
+    end)
+    return ok
+end
+
+local function removeClientLoadingWidget(reason)
+    local removed = false
+    if isValid(clientLoadingWidget) then
+        removed = pcall(function()
+            clientLoadingWidget:RemoveFromParent()
+        end)
+    end
+    clientLoadingWidget = nil
+    if removed then
+        report("loading_widget=removed reason=" .. tostring(reason))
+    end
+    return removed
+end
+
+local function updateClientLoadingWidget(stage, detail, reason)
+    if not ENABLE_CLIENT_LOADING_WIDGET or not clientTravelCurtainHeld then
+        return false
+    end
+
+    clientLoadingWidgetStage = stage or clientLoadingWidgetStage
+    clientLoadingWidgetDetail = detail or clientLoadingWidgetDetail
+
+    if not isValid(clientLoadingWidget) then
+        clientLoadingWidget = nil
+        local world = UEHelpers.GetWorld()
+        local controller = UEHelpers.GetPlayerController()
+        if not isValid(world) or not isValid(controller) then
+            return false
+        end
+
+        local assetOk = true
+        local assetDetail = "soft-class-blocking"
+        local classOk, widgetClass = pcall(function()
+            local systemLibrary = UEHelpers.GetKismetSystemLibrary()
+            if not isValid(systemLibrary) then
+                error("KismetSystemLibrary is unavailable")
+            end
+            -- I ask Unreal for the cooked class directly. The little sidecar pak
+            -- is mounted just fine; it simply skipped the original guest list.
+            local softPath = systemLibrary:MakeSoftClassPath(CLIENT_LOADING_WIDGET_CLASS)
+            local softClass = systemLibrary:Conv_SoftClassPathToSoftClassRef(softPath)
+            return systemLibrary:LoadClassAsset_Blocking(softClass)
+        end)
+        local libraryOk, widgetLibrary = pcall(function()
+            return StaticFindObject(WIDGET_BLUEPRINT_LIBRARY)
+        end)
+
+        if not assetOk or not classOk or not isValid(widgetClass) or
+           not libraryOk or not isValid(widgetLibrary) then
+            if clientLoadingWidgetFailureGeneration ~= clientTravelCurtainGeneration then
+                clientLoadingWidgetFailureGeneration = clientTravelCurtainGeneration
+                report(string.format(
+                    "loading_widget=unavailable reason=%s assetOk=%s asset=%s classOk=%s class=%s libraryOk=%s library=%s",
+                    tostring(reason),
+                    tostring(assetOk),
+                    assetOk and objectName(assetDetail) or tostring(assetDetail),
+                    tostring(classOk),
+                    objectName(widgetClass),
+                    tostring(libraryOk),
+                    objectName(widgetLibrary)))
+            end
+            return false
+        end
+
+        local created, widget = pcall(function()
+            return widgetLibrary:Create(world, widgetClass, controller)
+        end)
+        if not created or not isValid(widget) then
+            if clientLoadingWidgetFailureGeneration ~= clientTravelCurtainGeneration then
+                clientLoadingWidgetFailureGeneration = clientTravelCurtainGeneration
+                report(string.format(
+                    "loading_widget=create-failed reason=%s detail=%s",
+                    tostring(reason),
+                    tostring(widget)))
+            end
+            return false
+        end
+
+        local added, addDetail = pcall(function()
+            widget:AddToViewport(10000)
+        end)
+        if not added then
+            pcall(function()
+                widget:RemoveFromParent()
+            end)
+            if clientLoadingWidgetFailureGeneration ~= clientTravelCurtainGeneration then
+                clientLoadingWidgetFailureGeneration = clientTravelCurtainGeneration
+                report(string.format(
+                    "loading_widget=viewport-failed reason=%s detail=%s",
+                    tostring(reason),
+                    tostring(addDetail)))
+            end
+            return false
+        end
+
+        clientLoadingWidget = widget
+        clientLoadingWidgetFailureGeneration = -1
+        report(string.format(
+            "loading_widget=created reason=%s widget=%s",
+            tostring(reason),
+            objectName(widget)))
+    end
+
+    local stageOk = setClientLoadingText(
+        clientLoadingWidget,
+        "LoadingStageText",
+        clientLoadingWidgetStage)
+    local detailOk = setClientLoadingText(
+        clientLoadingWidget,
+        "LoadingDetailText",
+        clientLoadingWidgetDetail)
+    local versionOk = setClientLoadingText(
+        clientLoadingWidget,
+        "VersionText",
+        "LIMELIGHTMP " .. MOD_VERSION)
+
+    report(string.format(
+        "loading_widget=updated reason=%s stage=%s stageOk=%s detailOk=%s versionOk=%s",
+        tostring(reason),
+        clientLoadingWidgetStage,
+        tostring(stageOk),
+        tostring(detailOk),
+        tostring(versionOk)))
+    return stageOk and detailOk and versionOk
+end
+
+local function showClientTravelCurtain(reason)
+    if not ENABLE_CLIENT_TRAVEL_CURTAIN or not clientTravelCurtainHeld then
+        return false
+    end
+
+    local shown = 0
+    local ok, layouts = pcall(function()
+        return FindAllOf("UI_Layout_Game_C") or {}
+    end)
+    if ok then
+        for _, layout in ipairs(layouts) do
+            local panel = readProperty(layout, "FadeToBlackPanel")
+            if isValid(panel) then
+                local showOk = pcall(function()
+                    panel:ShowInstantly()
+                end)
+                if showOk then
+                    shown = shown + 1
+                end
+            end
+        end
+    end
+
+    report(string.format(
+        "travel_curtain=show reason=%s panels=%d",
+        tostring(reason),
+        shown))
+    updateClientLoadingWidget(nil, nil, reason)
+    return shown > 0
+end
+
+local function beginClientTravelCurtain(reason, stage, detail)
+    if not ENABLE_CLIENT_TRAVEL_CURTAIN then
+        return
+    end
+
+    clientTravelCurtainHeld = true
+    clientTravelCurtainRecoveryReady = false
+    clientTravelCurtainReadyChecks = 0
+    clientTravelCurtainGeneration = clientTravelCurtainGeneration + 1
+    clientLoadingWidgetStage = stage or "LOADING THE HOST WORLD"
+    clientLoadingWidgetDetail = detail or
+        "UNREAL IS MOVING EVERYONE WITHOUT DROPPING CHUCKLES..."
+    clientLoadingWidgetFailureGeneration = -1
+    local generation = clientTravelCurtainGeneration
+    showClientTravelCurtain(reason)
+    -- I take the curtain down if networking spends twenty seconds looking for
+    -- its other shoe. A visible retry is kinder than an immaculate black void.
+    ExecuteInGameThreadWithDelay(20000, function()
+        if clientTravelCurtainHeld and generation == clientTravelCurtainGeneration then
+            releaseClientTravelCurtain("safety-timeout")
+        end
+    end)
+end
+
+local function refreshClientTravelCurtain(reason)
+    if clientTravelCurtainHeld then
+        showClientTravelCurtain(reason)
+    end
+end
+
+releaseClientTravelCurtain = function(reason)
+    if not clientTravelCurtainHeld then
+        return false
+    end
+
+    clientTravelCurtainHeld = false
+    clientTravelCurtainRecoveryReady = false
+    clientTravelCurtainReadyChecks = 0
+    removeClientLoadingWidget(reason)
+    local hidden = 0
+    local ok, panels = pcall(function()
+        return FindAllOf("WBP_FadeToBlack_C") or {}
+    end)
+    if ok then
+        for _, panel in ipairs(panels) do
+            local panelName = objectName(panel)
+            if isValid(panel) and not string.find(panelName, "Default__", 1, true) then
+                local hideOk = pcall(function()
+                    panel:HideInstantly()
+                end)
+                if hideOk then
+                    hidden = hidden + 1
+                end
+            end
+        end
+    end
+
+    report(string.format(
+        "travel_curtain=release reason=%s panels=%d",
+        tostring(reason),
+        hidden))
+    return hidden > 0
+end
+
 local function hideStaleFadePanels(reason)
+    if clientTravelCurtainHeld then
+        report("travel_curtain=stale-fade-cleanup-deferred reason=" .. tostring(reason))
+        return false
+    end
     local hidden = 0
     local ok, panels = pcall(function()
         return FindAllOf("WBP_FadeToBlack_C") or {}
@@ -810,6 +1068,14 @@ local function recoverClientTransitionPresentation(reason)
         tostring(reason),
         tostring(ok),
         ok and "nil" or tostring(detail)))
+    if ok and clientTravelCurtainHeld then
+        clientTravelCurtainRecoveryReady = true
+        updateClientLoadingWidget(
+            "SETTING THE CLIENT CAMERA",
+            "PUTTING CHUCKLES BACK IN THE RIGHT REALITY...",
+            reason .. ":recovery-ready")
+        report("travel_curtain=recovery-ready reason=" .. tostring(reason))
+    end
     return ok
 end
 
@@ -817,18 +1083,48 @@ local function scheduleClientTransitionRecovery(reason)
     transitionRecoveryGeneration = transitionRecoveryGeneration + 1
     local generation = transitionRecoveryGeneration
     report(string.format(
-        "transition_recovery=scheduled reason=%s generation=%d",
+        "transition_recovery=scheduled reason=%s generation=%d mode=stable",
         tostring(reason),
         generation))
 
-    for _, delayMs in ipairs({ 150, 500, 900, 1800, 3200, 5000 }) do
-        local delay = delayMs
-        ExecuteInGameThreadWithDelay(delay, function()
-            if generation == transitionRecoveryGeneration then
-                recoverClientTransitionPresentation(reason .. ":" .. tostring(delay) .. "ms")
-            end
-        end)
+    local checks = 0
+    local stableChecks = 0
+    local check
+    check = function()
+        if generation ~= transitionRecoveryGeneration or worldTransitioning then
+            return
+        end
+
+        checks = checks + 1
+        local controller = UEHelpers.GetPlayerController()
+        local presentationReady = isValid(controller) and
+            isValid(readProperty(controller, "Pawn"))
+        stableChecks = presentationReady and (stableChecks + 1) or 0
+
+        if stableChecks >= 3 then
+            local ok = recoverClientTransitionPresentation(reason .. ":stable")
+            report(string.format(
+                "transition_recovery=settled reason=%s generation=%d checks=%d ok=%s",
+                tostring(reason),
+                generation,
+                checks,
+                tostring(ok)))
+            return
+        end
+
+        if checks >= 32 then
+            report(string.format(
+                "transition_recovery=yield-timeout reason=%s generation=%d checks=%d",
+                tostring(reason),
+                generation,
+                checks))
+            return
+        end
+
+        ExecuteInGameThreadWithDelay(250, check)
     end
+
+    ExecuteInGameThreadWithDelay(150, check)
 end
 
 local function smoothTargetAnchor(location, targetName)
@@ -1375,6 +1671,12 @@ local function updateCamera()
     elseif cameraUpdates % 600 == 0 then
         report(string.format("camera=healthy updates=%d target=%s", cameraUpdates, targetName))
     end
+    if clientTravelCurtainHeld and clientTravelCurtainRecoveryReady then
+        clientTravelCurtainReadyChecks = clientTravelCurtainReadyChecks + 1
+        if clientTravelCurtainReadyChecks >= 3 then
+            releaseClientTravelCurtain("recovery-and-camera-stable")
+        end
+    end
     return true, nil
 end
 
@@ -1443,6 +1745,10 @@ local function startCameraLoop(reason)
             if not ok and not waitingReported then
                 waitingReported = true
                 report("camera=waiting detail=" .. tostring(detail))
+                updateClientLoadingWidget(
+                    "FINDING CHUCKLES",
+                    "CHECKING CONTROLLER, CAMERA, AND OWNERSHIP...",
+                    "camera-waiting")
             elseif ok then
                 waitingReported = false
             end
@@ -1498,6 +1804,10 @@ local function tryJoin(reason)
     end
 
     joinIssued = true
+    beginClientTravelCurtain(
+        "connection-attempt",
+        "CONNECTING TO LIMELIGHTMP",
+        "OPENING A LOCAL DOOR TO THE HOST...")
     local command = "open " .. CONNECT_ADDRESS
     local ok, detail = pcall(function()
         systemLibrary:ExecuteConsoleCommand(world, command, controller)
@@ -1516,6 +1826,10 @@ end
 installRhythmSyncHook()
 
 RegisterLoadMapPreHook(function()
+    beginClientTravelCurtain(
+        "map-transition",
+        "LOADING THE HOST WORLD",
+        "UNREAL IS MOVING EVERYONE WITHOUT DROPPING CHUCKLES...")
     worldTransitioning = true
     transitionRecoveryGeneration = transitionRecoveryGeneration + 1
     cameraGeneration = cameraGeneration + 1
@@ -1533,6 +1847,17 @@ end)
 
 RegisterLoadMapPostHook(function()
     worldTransitioning = false
+    updateClientLoadingWidget(
+        "SYNCHRONISING THE ARENA",
+        "CHECKING OWNERSHIP, CAMERA, AND CONTROLS...",
+        "map-load:stage")
+    refreshClientTravelCurtain("map-load:immediate")
+    for _, delayMs in ipairs({ 1, 75, 250, 750, 1500 }) do
+        local delay = delayMs
+        ExecuteInGameThreadWithDelay(delay, function()
+            refreshClientTravelCurtain("map-load:" .. tostring(delay) .. "ms")
+        end)
+    end
     local worldName = string.lower(objectName(UEHelpers.GetWorld()))
     report("map_transition=finished world=" .. objectName(UEHelpers.GetWorld()))
     if isGameplayWorld() then
