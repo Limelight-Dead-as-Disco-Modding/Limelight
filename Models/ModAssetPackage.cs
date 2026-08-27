@@ -39,6 +39,17 @@ namespace Limelight.Models
                 StringComparison.OrdinalIgnoreCase);
 
         [JsonIgnore]
+        public bool IsCharlieAsset =>
+            IsCharlieMesh ||
+            (!IsCharacterSlotAsset &&
+             (PackagePath.StartsWith(
+                  "/Game/Pagoda/Characters/Player/",
+                  StringComparison.OrdinalIgnoreCase) ||
+              PackagePath.StartsWith(
+                  "/Game/Pagoda/Characters/Materials/",
+                  StringComparison.OrdinalIgnoreCase)));
+
+        [JsonIgnore]
         public bool IsSafeForLiveReload =>
             Kind switch
             {

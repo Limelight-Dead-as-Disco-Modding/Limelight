@@ -98,7 +98,7 @@ namespace Limelight.Models
         public bool IsPlayerCharacterMod =>
             IsCharacterSlotMod ||
             AssetPackages.Any(package =>
-                package.IsCharlieMesh);
+                package.IsCharlieAsset);
 
         [JsonIgnore]
         public bool IsConventionalMod =>
