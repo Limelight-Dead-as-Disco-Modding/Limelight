@@ -7277,7 +7277,7 @@ namespace Limelight
                     automaticDiagnostics,
                     loaderMode,
                     _gameDirectory,
-                    _nexusApiKey);
+                    null);
 
                 ShowLimelightDialog(
                     "TEST REPORT READY",

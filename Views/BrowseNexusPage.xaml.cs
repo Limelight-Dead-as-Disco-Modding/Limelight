@@ -210,18 +210,18 @@ namespace Limelight.Views
             Dispatcher.BeginInvoke(
                 new Action(() =>
                 {
-                    long totalBytes =
+                    ulong? totalBytes =
                         operation.TotalBytesToReceive;
 
                     DownloadProgressBar.IsIndeterminate =
-                        totalBytes <= 0;
+                        totalBytes is null or 0;
 
-                    if (totalBytes > 0)
+                    if (totalBytes is > 0)
                     {
                         DownloadProgressBar.Value =
                             Math.Clamp(
                                 operation.BytesReceived /
-                                (double)totalBytes *
+                                (double)totalBytes.Value *
                                 100,
                                 0,
                                 100);
