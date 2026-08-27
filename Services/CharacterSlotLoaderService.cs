@@ -280,6 +280,25 @@ namespace Limelight.Services
         private static bool HasEnabledOfficialLuaLoader(
             string gameDirectory)
         {
+            string logicModsDirectory =
+                Path.Combine(
+                    gameDirectory,
+                    "Pagoda",
+                    "Content",
+                    "Paks",
+                    "LogicMods");
+
+            // I only step aside when the original script still has its own
+            // complete actor payload to talk to.
+            if (!LegacyRequiredFiles.All(fileName =>
+                    File.Exists(
+                        Path.Combine(
+                            logicModsDirectory,
+                            fileName))))
+            {
+                return false;
+            }
+
             string win64Directory =
                 Path.Combine(
                     gameDirectory,
