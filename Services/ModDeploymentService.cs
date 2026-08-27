@@ -272,6 +272,13 @@ namespace Limelight.Services
                         }
                         : new List<string>();
 
+            var characterSlotMetadataFiles =
+                new HashSet<string>(
+                    mod.IsCharacterSlotMod
+                        ? metadataFiles
+                        : Enumerable.Empty<string>(),
+                    StringComparer.OrdinalIgnoreCase);
+
             IEnumerable<string> sourceFiles =
                 mod.PackageFiles.Concat(metadataFiles)
                     .Distinct(
@@ -300,10 +307,17 @@ namespace Limelight.Services
                         $"A package file is missing from {mod.DisplayName}.");
                 }
 
+                string destinationRelativePath =
+                    characterSlotMetadataFiles.Contains(relativePath)
+                        ? Path.GetRelativePath(
+                            mod.InstallDirectory,
+                            sourcePath)
+                        : Path.GetFileName(sourcePath);
+
                 string finalPath =
                     Path.Combine(
                         destinationDirectory,
-                        Path.GetFileName(sourcePath));
+                        destinationRelativePath);
 
                 if (!usedDestinations.Add(
                         Path.GetFullPath(finalPath)))
