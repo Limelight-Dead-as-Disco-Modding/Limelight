@@ -68,7 +68,7 @@ namespace Limelight.Views
             List<InstalledMod> characterMods =
                 visibleMods
                     .Where(mod =>
-                        mod.IsPlayerCharacterMod)
+                        mod.IsCharacterReplacement)
                     .ToList();
 
             List<InstalledMod> otherMods =

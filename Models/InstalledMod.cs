@@ -101,6 +101,12 @@ namespace Limelight.Models
                 package.IsCharlieAsset);
 
         [JsonIgnore]
+        public bool IsCharacterReplacement =>
+            IsPlayerCharacterMod ||
+            AssetPackages.Any(package =>
+                package.IsCharlieAppearanceAsset);
+
+        [JsonIgnore]
         public bool IsConventionalMod =>
             !IsPlayerCharacterMod &&
             !IsArenaSlotMod;
@@ -123,7 +129,7 @@ namespace Limelight.Models
                     return "ARENA SLOT";
                 }
 
-                if (IsPlayerCharacterMod)
+                if (IsCharacterReplacement)
                 {
                     return "CHARLIE REPLACEMENT";
                 }
@@ -155,6 +161,11 @@ namespace Limelight.Models
                 if (IsPlayerCharacterMod)
                 {
                     return "LIVE SWITCHING AVAILABLE";
+                }
+
+                if (IsCharacterReplacement)
+                {
+                    return "TARGET: CHARLIE  |  NEXT LAUNCH";
                 }
 
                 string friendlyTarget =
