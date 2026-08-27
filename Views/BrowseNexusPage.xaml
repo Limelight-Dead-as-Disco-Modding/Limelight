@@ -1,347 +1,18 @@
 <UserControl x:Class="Limelight.Views.BrowseNexusPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="clr-namespace:Limelight.Converters"
              xmlns:webview2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              Background="{StaticResource BackgroundBrush}"
              Foreground="{StaticResource TextBrush}"
              FontFamily="Bahnschrift, Segoe UI">
-
-    <UserControl.Resources>
-        <converters:NexusThumbnailConverter x:Key="NexusThumbnailConverter"
-                                            DecodePixelWidth="420"/>
-
-        <SolidColorBrush x:Key="NexusBrandYellowBrush"
-                         Color="#9A2B76"/>
-
-        <SolidColorBrush x:Key="NexusBrandTextBrush"
-                         Color="#F7F7FF"/>
-
-        <SolidColorBrush x:Key="NexusDisconnectedButtonBrush"
-                         Color="#131629"/>
-
-        <SolidColorBrush x:Key="NexusAccountButtonDisconnectedBorderBrush"
-                         Color="#9A2B76"/>
-
-        <SolidColorBrush x:Key="NexusAccountButtonConnectedBorderBrush"
-                         Color="#3AC9E6"/>
-
-        <SolidColorBrush x:Key="NexusAccountButtonConnectedBrush"
-                         Color="#1A1E35"/>
-
-        <LinearGradientBrush x:Key="NexusBrandButtonBrush"
-                            StartPoint="0,0"
-                            EndPoint="0,1">
-            <GradientStop Offset="0" Color="#C04E8B"/>
-            <GradientStop Offset="1" Color="#9A2B76"/>
-        </LinearGradientBrush>
-
-        <Style x:Key="NexusTopBarConnectionButtonStyle"
-               TargetType="Button">
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Background" Value="{StaticResource NexusDisconnectedButtonBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource NexusAccountButtonDisconnectedBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonSurface"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver"
-                                     Value="True">
-                                <Setter TargetName="ButtonSurface"
-                                        Property="Background"
-                                        Value="#B13D83"/>
-                            </Trigger>
-
-                            <Trigger Property="IsEnabled"
-                                     Value="False">
-                                <Setter Property="Opacity"
-                                        Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="NexusOAuthButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="MinWidth" Value="252"/>
-            <Setter Property="Height" Value="38"/>
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="{StaticResource PinkBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style x:Key="NexusMiniLinkStyle"
-               TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="TextDecorations" Value="Underline"/>
-        </Style>
-
-        <Style x:Key="NexusScrollThumbStyle"
-               TargetType="Thumb">
-            <Setter Property="MinHeight" Value="34"/>
-            <Setter Property="Background" Value="#343A59"/>
-            <Setter Property="Cursor" Value="Hand"/>
-
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Border x:Name="ThumbBackground"
-                                Margin="2,1"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="4"/>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver"
-                                     Value="True">
-                                <Setter TargetName="ThumbBackground"
-                                        Property="Background"
-                                        Value="#9A2B76"/>
-                            </Trigger>
-
-                            <Trigger Property="IsDragging"
-                                     Value="True">
-                                <Setter TargetName="ThumbBackground"
-                                        Property="Background"
-                                        Value="{StaticResource PinkBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="NexusVerticalScrollBarStyle"
-               TargetType="ScrollBar">
-            <Setter Property="Width" Value="11"/>
-            <Setter Property="Margin" Value="0,0,4,0"/>
-            <Setter Property="Background" Value="#111528"/>
-
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="5">
-
-                            <Track x:Name="PART_Track"
-                                   Focusable="False"
-                                   IsDirectionReversed="True"
-                                   Orientation="Vertical">
-
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
-                                                  Focusable="False"
-                                                  Opacity="0"/>
-                                </Track.DecreaseRepeatButton>
-
-                                <Track.Thumb>
-                                    <Thumb Style="{StaticResource NexusScrollThumbStyle}"/>
-                                </Track.Thumb>
-
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
-                                                  Focusable="False"
-                                                  Opacity="0"/>
-                                </Track.IncreaseRepeatButton>
-                            </Track>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="NexusSortItemStyle"
-               TargetType="ComboBoxItem">
-            <Setter Property="Padding" Value="12,9"/>
-            <Setter Property="Background" Value="#1A1E35"/>
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="ItemBackground"
-                                Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}">
-
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted"
-                                     Value="True">
-                                <Setter TargetName="ItemBackground"
-                                        Property="Background"
-                                        Value="#2A2544"/>
-
-                                <Setter Property="Foreground"
-                                        Value="{StaticResource PinkBrush}"/>
-                            </Trigger>
-
-                            <Trigger Property="IsSelected"
-                                     Value="True">
-                                <Setter TargetName="ItemBackground"
-                                        Property="Background"
-                                        Value="#25203B"/>
-
-                                <Setter Property="Foreground"
-                                        Value="{StaticResource PinkBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="NexusSortComboBoxStyle"
-               TargetType="ComboBox">
-            <Setter Property="Background" Value="#1A1E35"/>
-            <Setter Property="Foreground" Value="{StaticResource PinkBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="ItemContainerStyle" Value="{StaticResource NexusSortItemStyle}"/>
-
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBox">
-                        <Grid>
-                            <ToggleButton x:Name="SortToggle"
-                                          Background="Transparent"
-                                          BorderThickness="0"
-                                          Focusable="False"
-                                          ClickMode="Press"
-                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-
-                                <ToggleButton.Template>
-                                    <ControlTemplate TargetType="ToggleButton">
-                                        <Border x:Name="SortBackground"
-                                                Background="#1A1E35"
-                                                BorderBrush="{StaticResource BorderBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="7">
-
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="32"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <ContentPresenter Margin="12,0,4,0"
-                                                                  HorizontalAlignment="Left"
-                                                                  VerticalAlignment="Center"
-                                                                  Content="{TemplateBinding Content}"
-                                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                  TextElement.Foreground="{StaticResource PinkBrush}"/>
-
-                                                <Path Grid.Column="1"
-                                                      Width="8"
-                                                      Height="5"
-                                                      HorizontalAlignment="Center"
-                                                      VerticalAlignment="Center"
-                                                      Data="M 0 0 L 4 4 L 8 0"
-                                                      Stroke="{StaticResource PinkBrush}"
-                                                      StrokeThickness="1.5"/>
-                                            </Grid>
-                                        </Border>
-
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver"
-                                                     Value="True">
-                                                <Setter TargetName="SortBackground"
-                                                        Property="Background"
-                                                        Value="#25203B"/>
-                                            </Trigger>
-
-                                            <Trigger Property="IsChecked"
-                                                     Value="True">
-                                                <Setter TargetName="SortBackground"
-                                                        Property="BorderBrush"
-                                                        Value="{StaticResource PinkBrush}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </ToggleButton.Template>
-                            </ToggleButton>
-
-                            <ContentPresenter Margin="12,0,34,0"
-                                              HorizontalAlignment="Left"
-                                              VerticalAlignment="Center"
-                                              IsHitTestVisible="False"
-                                              Content="{TemplateBinding SelectionBoxItem}"
-                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                              TextElement.Foreground="{StaticResource PinkBrush}"/>
-
-                            <Popup x:Name="PART_Popup"
-                                   AllowsTransparency="True"
-                                   Focusable="False"
-                                   IsOpen="{TemplateBinding IsDropDownOpen}"
-                                   Placement="Bottom"
-                                   PopupAnimation="Fade">
-
-                                <Border MinWidth="170"
-                                        Margin="0,4,0,0"
-                                        Padding="1"
-                                        Background="#1A1E35"
-                                        BorderBrush="{StaticResource PinkBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="7">
-
-                                    <ScrollViewer MaxHeight="220"
-                                                  VerticalScrollBarVisibility="Auto">
-
-                                        <StackPanel IsItemsHost="True"
-                                                    KeyboardNavigation.DirectionalNavigation="Contained"/>
-                                    </ScrollViewer>
-                                </Border>
-                            </Popup>
-                        </Grid>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled"
-                                     Value="False">
-                                <Setter Property="Opacity"
-                                        Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
-
-    <Grid>
+    <Grid Margin="38,30,38,34">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Margin="38,30,38,20">
+        <Grid Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -352,661 +23,172 @@
                            FontSize="12"
                            FontWeight="Bold"
                            Foreground="{StaticResource CyanBrush}"/>
-
-                <TextBlock Text="FIND YOUR NEXT HEADLINER"
+                <TextBlock Text="THE REAL CATALOGUE, RIGHT INSIDE LIMELIGHT"
                            Margin="0,5,0,0"
                            FontSize="27"
                            FontWeight="Bold"/>
-
-                <TextBlock Text="Discover Dead as Disco mods and bring them straight into your Limelight library."
+                <TextBlock Text="Sign in on Nexus Mods normally. Supported archives downloaded in this window are handed directly to Limelight's importer."
                            Margin="0,8,0,0"
+                           MaxWidth="820"
                            FontSize="13"
                            TextWrapping="Wrap"
                            Foreground="{StaticResource MutedTextBrush}"/>
             </StackPanel>
 
-            <Button x:Name="NexusAccountButton"
-                    Grid.Column="1"
-                    Padding="0"
+            <Border Grid.Column="1"
+                    Padding="12,7"
                     VerticalAlignment="Top"
-                    Click="NexusAccountButton_Click"
-                    Style="{StaticResource NexusTopBarConnectionButtonStyle}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Width="34"
-                            Height="34"
-                            Margin="0,0,10,0"
-                            VerticalAlignment="Center"
-                                x:Name="NexusAccountLogoBorder"
-                                Background="{StaticResource NexusDisconnectedButtonBrush}"
-                                BorderBrush="{StaticResource NexusAccountButtonDisconnectedBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8">
-
-                        <TextBlock x:Name="NexusAccountLogoText"
-                                   Text="N"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontSize="15"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource NexusBrandTextBrush}"/>
-                    </Border>
-
-                    <StackPanel Grid.Column="1"
-                                VerticalAlignment="Center">
-                        <TextBlock x:Name="NexusAccountButtonHeaderText"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   Text="NEXUS MODS"/>
-
-                        <TextBlock x:Name="NexusAccountButtonStatusText"
-                                   FontSize="11"
-                                   FontWeight="Bold"
-                                   Text="ACCOUNT REQUIRED"/>
-                    </StackPanel>
-
-                    <Path x:Name="NexusConnectionChevron"
-                          Grid.Column="2"
-                          Width="8"
-                          Height="4"
-                          VerticalAlignment="Center"
-                          HorizontalAlignment="Right"
-                          Data="M 0 0 L 4 4 L 8 0"
-                          Stroke="{StaticResource NexusBrandTextBrush}"
-                          StrokeThickness="1.5"/>
-                </Grid>
-            </Button>
-
-            <Popup x:Name="NexusAccountPopup"
-                   PlacementTarget="{Binding ElementName=NexusAccountButton}"
-                   Placement="Bottom"
-                   StaysOpen="False"
-                   AllowsTransparency="True"
-                   PopupAnimation="Fade">
-
-                <Border Width="330"
-                        Margin="0,4,0,0"
-                        Padding="14"
-                        Background="{StaticResource RaisedPanelBrush}"
-                        BorderBrush="{StaticResource PinkBrush}"
-                        BorderThickness="1"
-                        CornerRadius="9">
-
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Border Width="46"
-                                    Height="46"
-                                    Background="{StaticResource PanelBrush}"
-                                    BorderBrush="{StaticResource CyanBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="10">
-
-                                <TextBlock Text="NEXUS"
-                                           Margin="4,8,0,0"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Center"
-                                           FontSize="12"
-                                           FontWeight="Bold"
-                                           Foreground="{StaticResource CyanBrush}"/>
-                            </Border>
-
-                            <StackPanel Grid.Column="1"
-                                        Margin="10,0,0,0"
-                                        VerticalAlignment="Center">
-                            <TextBlock x:Name="NexusDropdownTitleText"
-                                       FontSize="12"
-                                       Foreground="{StaticResource TextBrush}"
-                                       FontWeight="Bold"
-                                       Text="Connect to Nexus Mods"/>
-
-                            <TextBlock Text="NEXUS MODS"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource MutedTextBrush}"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <TextBlock x:Name="NexusDropdownSubtitleText"
-                                   Margin="0,11,0,0"
-                                   TextWrapping="Wrap"
-                                   FontSize="11"
-                                   Foreground="{StaticResource MutedTextBrush}"
-                                   Text="Sign in with your Nexus Mods account using OAuth for a convenient login experience"/>
-
-                        <Button x:Name="NexusOAuthLoginButton"
-                                Margin="0,12,0,0"
-                                Click="NexusOAuthLoginButton_Click"
-                                Content="SIGN IN WITH NEXUS MODS"
-                                Style="{StaticResource NexusOAuthButtonStyle}"/>
-
-                        <TextBlock x:Name="NexusUseApiKeyLink"
-                                   Margin="0,10,0,0"
-                                   HorizontalAlignment="Center"
-                                   Style="{StaticResource NexusMiniLinkStyle}"
-                                   Text="use api key instead"
-                                   MouseLeftButtonUp="NexusUseApiKeyLink_Click"/>
-                    </StackPanel>
-                </Border>
-            </Popup>
-        </Grid>
-
-        <Grid Grid.Row="1">
-            <Border x:Name="NexusBrowserFrame"
-                    Margin="38,0,38,34"
-                    Background="{StaticResource PanelBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
+                    Background="#132A33"
+                    BorderBrush="{StaticResource CyanBrush}"
                     BorderThickness="1"
-                    CornerRadius="11">
-
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Grid Margin="12"
-                          VerticalAlignment="Top">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Button x:Name="NexusBrowserBackButton"
-                                MinWidth="96"
-                                Content="BACK"
-                                Margin="0,0,8,0"
-                                Click="NexusBrowserBackButton_Click"
-                                Style="{StaticResource SecondaryButton}"/>
-
-                        <Button x:Name="NexusBrowserForwardButton"
-                                Grid.Column="1"
-                                MinWidth="96"
-                                Content="FORWARD"
-                                Margin="0,0,8,0"
-                                Click="NexusBrowserForwardButton_Click"
-                                Style="{StaticResource SecondaryButton}"/>
-
-                        <Button x:Name="NexusBrowserRefreshButton"
-                                Grid.Column="2"
-                                MinWidth="96"
-                                Content="REFRESH"
-                                Margin="0,0,8,0"
-                                Click="NexusBrowserRefreshButton_Click"
-                                Style="{StaticResource SecondaryButton}"/>
-
-                        <Button x:Name="NexusBrowserHomeButton"
-                                Grid.Column="3"
-                                MinWidth="110"
-                                Content="HOME"
-                                Margin="0,0,8,0"
-                                Click="NexusBrowserHomeButton_Click"
-                                Style="{StaticResource PrimaryButton}"/>
-
-                        <TextBox x:Name="NexusBrowserAddressBar"
-                                 Grid.Column="4"
-                                 Height="32"
-                                 Padding="10,5"
-                                 VerticalContentAlignment="Center"
-                                 Background="#0D1020"
-                                 BorderBrush="{StaticResource BorderBrush}"
-                                 BorderThickness="1"
-                                 Foreground="{StaticResource TextBrush}"
-                                 FontSize="11"
-                                 KeyDown="NexusBrowserAddressBar_KeyDown"/>
-                    </Grid>
-
-                    <webview2:WebView2 x:Name="NexusBrowser"
-                                       Grid.Row="1"
-                                       NavigationStarting="NexusBrowser_NavigationStarting"
-                                       NavigationCompleted="NexusBrowser_NavigationCompleted"/>
-                </Grid>
-            </Border>
-
-            <ScrollViewer x:Name="NexusResultsScrollViewer"
-                          Visibility="Collapsed"
-                          HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
-
-                <ScrollViewer.Resources>
-                    <Style TargetType="ScrollBar"
-                           BasedOn="{StaticResource NexusVerticalScrollBarStyle}"/>
-                </ScrollViewer.Resources>
-
-                <StackPanel Margin="38,0,38,34">
-
-                    <!-- Search stays at the top while the cards below can grow with the Nexus library. -->
-                    <Border Padding="16"
-                            Background="{StaticResource PanelBrush}"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="11">
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="170"/>
-                                <ColumnDefinition Width="170"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBox x:Name="NexusSearchBox"
-                                     Height="40"
-                                     Padding="12,8"
-                                     VerticalContentAlignment="Center"
-                                     Background="#0D1020"
-                                     Foreground="{StaticResource TextBrush}"
-                                     BorderBrush="{StaticResource BorderBrush}"
-                                     BorderThickness="1"
-                                     CaretBrush="{StaticResource CyanBrush}"
-                                     FontSize="13"
-                                     KeyDown="NexusSearchBox_KeyDown"
-                                     ToolTip="Search loaded mods, or paste a Nexus mod URL or ID"/>
-
-                            <ComboBox x:Name="NexusCategoryBox"
-                                      Grid.Column="1"
-                                      Height="40"
-                                      Margin="10,0,0,0"
-                                      SelectedIndex="0"
-                                      Style="{StaticResource NexusSortComboBoxStyle}"
-                                      SelectionChanged="NexusCategoryBox_SelectionChanged">
-
-                                <ComboBoxItem Content="ALL CATEGORIES"/>
-                            </ComboBox>
-
-                            <ComboBox x:Name="NexusSortBox"
-                                      Grid.Column="2"
-                                      Height="40"
-                                      Margin="10,0,0,0"
-                                      SelectedIndex="0"
-                                      Style="{StaticResource NexusSortComboBoxStyle}"
-                                      SelectionChanged="NexusSortBox_SelectionChanged">
-
-                                <ComboBoxItem Content="LATEST ADDED"/>
-                                <ComboBoxItem Content="LATEST UPDATED"/>
-                                <ComboBoxItem Content="TRENDING"/>
-                            </ComboBox>
-
-                            <Button x:Name="NexusSearchButton"
-                                    Grid.Column="3"
-                                    Content="SEARCH"
-                                    MinWidth="96"
-                                    Margin="10,0,0,0"
-                                    Click="SearchButton_Click"
-                                    Style="{StaticResource PrimaryButton}"/>
-
-                            <Button x:Name="NexusRefreshButton"
-                                    Grid.Column="4"
-                                    Content="REFRESH"
-                                    MinWidth="96"
-                                    Margin="10,0,0,0"
-                                    Click="RefreshButton_Click"
-                                    Style="{StaticResource SecondaryButton}"/>
-                        </Grid>
-                    </Border>
-
-                    <Grid Margin="2,18,2,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock x:Name="NexusResultsHeadingText"
-                                   Text="DEAD AS DISCO MODS"
-                                   FontSize="13"
-                                   FontWeight="Bold"/>
-
-                        <TextBlock x:Name="NexusResultCountText"
-                                   Grid.Column="1"
-                                   Text="CONNECT NEXUS TO BROWSE"
-                                   FontSize="11"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource PinkBrush}"/>
-                    </Grid>
-
-                    <ItemsControl x:Name="NexusModsList"
-                                  Visibility="Collapsed">
-
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Width="350"
-                                        Margin="0,0,16,16"
-                                        Background="{StaticResource PanelBrush}"
-                                        BorderBrush="{StaticResource BorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="11"
-                                        ClipToBounds="True">
-
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="150"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
-
-                                        <Border Background="#1A1E35">
-                                            <Grid>
-                                                <Image Source="{Binding PictureUrl,
-                                                        Converter={StaticResource NexusThumbnailConverter}}"
-                                                       Stretch="UniformToFill"/>
-
-                                                <Border Padding="10,5"
-                                                        Margin="12"
-                                                        HorizontalAlignment="Left"
-                                                        VerticalAlignment="Top"
-                                                        Background="#D90D1020"
-                                                        CornerRadius="6">
-
-                                                    <TextBlock Text="{Binding CategoryName}"
-                                                               FontSize="10"
-                                                               FontWeight="Bold"
-                                                               Foreground="{StaticResource CyanBrush}"/>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
-
-                                        <StackPanel Grid.Row="1"
-                                                    Margin="18,16,18,18">
-
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontSize="17"
-                                                       FontWeight="Bold"
-                                                       TextTrimming="CharacterEllipsis"/>
-
-                                            <TextBlock Margin="0,5,0,0"
-                                                       FontSize="11"
-                                                       Foreground="{StaticResource MutedTextBrush}">
-
-                                                <Run Text="BY "/>
-                                                <Run Text="{Binding Author}"/>
-                                                <Run Text="  •  VERSION "/>
-                                                <Run Text="{Binding Version}"/>
-                                            </TextBlock>
-
-                                            <TextBlock Text="{Binding Summary}"
-                                                       Height="42"
-                                                       Margin="0,11,0,0"
-                                                       FontSize="12"
-                                                       LineHeight="17"
-                                                       TextWrapping="Wrap"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Foreground="#C8C6D8"/>
-
-                                            <Grid Margin="0,15,0,0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <StackPanel VerticalAlignment="Center"
-                                                            Orientation="Horizontal">
-
-                                                    <TextBlock Text="{Binding EndorsementLabel}"
-                                                               FontSize="11"
-                                                               FontWeight="Bold"
-                                                               Foreground="{StaticResource CyanBrush}"/>
-
-                                                    <TextBlock Text="  •  "
-                                                               FontSize="11"
-                                                               Foreground="{StaticResource MutedTextBrush}"/>
-
-                                                    <TextBlock Text="{Binding DownloadLabel}"
-                                                               FontSize="11"
-                                                               Foreground="{StaticResource MutedTextBrush}"/>
-                                                </StackPanel>
-
-                                                <Button Grid.Column="1"
-                                                        Content="VIEW MOD"
-                                                        Padding="14,8"
-                                                        Tag="{Binding}"
-                                                        Click="ViewFilesButton_Click"
-                                                        Style="{StaticResource PrimaryButton}"/>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <Border x:Name="NexusPaginationPanel"
-                            Margin="0,2,16,16"
-                            Padding="16,12"
-                            Background="{StaticResource PanelBrush}"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="9"
-                            Visibility="Collapsed">
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock x:Name="NexusPageRangeText"
-                                       VerticalAlignment="Center"
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource CyanBrush}"/>
-
-                            <StackPanel Grid.Column="1"
-                                        Orientation="Horizontal">
-
-                                <Button x:Name="NexusPreviousPageButton"
-                                        Content="PREVIOUS"
-                                        MinWidth="100"
-                                        Click="PreviousPageButton_Click"
-                                        Style="{StaticResource SecondaryButton}"/>
-
-                                <Border MinWidth="112"
-                                        Margin="10,0"
-                                        Padding="14,9"
-                                        Background="#0D1020"
-                                        BorderBrush="{StaticResource PinkBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="7">
-
-                                    <TextBlock x:Name="NexusPageNumberText"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               FontSize="11"
-                                               FontWeight="Bold"
-                                               Foreground="{StaticResource PinkBrush}"/>
-                                </Border>
-
-                                <Button x:Name="NexusNextPageButton"
-                                        Content="NEXT"
-                                        MinWidth="100"
-                                        Click="NextPageButton_Click"
-                                        Style="{StaticResource SecondaryButton}"/>
-                            </StackPanel>
-
-                            <TextBlock Grid.Column="2"
-                                       Text="12 MODS PER PAGE"
-                                       HorizontalAlignment="Right"
-                                       VerticalAlignment="Center"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource MutedTextBrush}"/>
-                        </Grid>
-                    </Border>
-
-                    <Border x:Name="NexusEmptyState"
-                            Padding="42"
-                            Background="{StaticResource PanelBrush}"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="11">
-
-                        <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="◇"
-                                       HorizontalAlignment="Center"
-                                       FontSize="32"
-                                       Foreground="{StaticResource PinkBrush}"/>
-
-                            <TextBlock x:Name="NexusEmptyTitleText"
-                                       Text="CONNECT YOUR NEXUS ACCOUNT"
-                                       Margin="0,13,0,0"
-                                       HorizontalAlignment="Center"
-                                       FontSize="16"
-                                       FontWeight="Bold"/>
-
-                            <TextBlock x:Name="NexusEmptyMessageText"
-                                       Text="Open Settings and connect Nexus Mods before browsing the Dead as Disco library."
-                                       MaxWidth="480"
-                                       Margin="0,8,0,0"
-                                       HorizontalAlignment="Center"
-                                       TextAlignment="Center"
-                                       TextWrapping="Wrap"
-                                       FontSize="12"
-                                       LineHeight="18"
-                                       Foreground="{StaticResource MutedTextBrush}"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-
-            <Border x:Name="NexusLoadingPanel"
-                    Background="#D9080912"
-                    Visibility="Collapsed">
-
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-
-                    <ProgressBar Width="280"
-                                 Height="5"
-                                 IsIndeterminate="True"
-                                 Foreground="{StaticResource CyanBrush}"/>
-
-                    <TextBlock Text="LOADING THE NEXT ACT..."
-                               Margin="0,16,0,0"
-                               HorizontalAlignment="Center"
-                               FontSize="12"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource CyanBrush}"/>
-                </StackPanel>
+                    CornerRadius="7">
+                <TextBlock Text="PRIVATE BROWSER SESSION"
+                           FontSize="9"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource CyanBrush}"/>
             </Border>
         </Grid>
 
-        <!-- Masking for under construction nexus intergration, will probably change to like a little chrome window like how HD2 Arsenal works. <Border Grid.RowSpan="2"
-                Margin="38,88,38,38"
-                Padding="34"
-                Panel.ZIndex="30"
-                Background="#F4080912"
-                BorderBrush="#6B3158"
+        <Border Grid.Row="1"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="14">
+                CornerRadius="11"
+                ClipToBounds="True">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel MaxWidth="760"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <Border Width="76"
-                            Height="76"
-                            HorizontalAlignment="Center"
-                            Background="#1A1E35"
-                            BorderBrush="{StaticResource PinkBrush}"
-                            BorderThickness="1"
-                            CornerRadius="18">
-                        <TextBlock Text="N"
+                <Border Padding="12"
+                        Background="#111427"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Content="BACK"
+                                MinWidth="64"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="BackButton_Click"/>
+                        <Button Grid.Column="1"
+                                Content="FORWARD"
+                                MinWidth="78"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="ForwardButton_Click"/>
+                        <Button Grid.Column="2"
+                                Content="REFRESH"
+                                MinWidth="74"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="RefreshButton_Click"/>
+                        <Button Grid.Column="3"
+                                Content="HOME"
+                                MinWidth="62"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="HomeButton_Click"/>
+
+                        <TextBox x:Name="NexusAddressBox"
+                                 Grid.Column="4"
+                                 Height="38"
+                                 Margin="12,0,0,0"
+                                 Padding="12,8"
+                                 VerticalContentAlignment="Center"
+                                 Background="#0B0D18"
+                                 BorderBrush="{StaticResource BorderBrush}"
+                                 BorderThickness="1"
+                                 Foreground="{StaticResource TextBrush}"
+                                 CaretBrush="{StaticResource CyanBrush}"
+                                 FontFamily="Consolas"
+                                 FontSize="11"
+                                 KeyDown="NexusAddressBox_KeyDown"/>
+                    </Grid>
+                </Border>
+
+                <webview2:WebView2 x:Name="NexusBrowser"
+                                   Grid.Row="1"
+                                   NavigationStarting="NexusBrowser_NavigationStarting"
+                                   NavigationCompleted="NexusBrowser_NavigationCompleted"/>
+
+                <Border x:Name="BrowserUnavailablePanel"
+                        Grid.Row="1"
+                        Visibility="Collapsed"
+                        Background="#F20A0C17">
+                    <StackPanel MaxWidth="580"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="THE NEXUS BROWSER COULD NOT START"
                                    HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontSize="34"
-                                   FontStyle="Italic"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource PinkBrush}"/>
-                    </Border>
-
-                    <TextBlock Text="NEXUS MODS"
-                               Margin="0,24,0,0"
-                               HorizontalAlignment="Center"
-                               FontSize="11"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource CyanBrush}"/>
-
-                    <TextBlock Text="THE CATALOGUE IS BETWEEN SETS"
-                               Margin="0,8,0,0"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               FontSize="25"
-                               FontWeight="Bold"/>
-
-                    <TextBlock Text="Nexus authentication, browsing, and direct downloads are temporarily unavailable while Limelight's application registration is reviewed."
-                               MaxWidth="650"
-                               Margin="0,12,0,0"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap"
-                               FontSize="13"
-                               LineHeight="20"
-                               Foreground="{StaticResource MutedTextBrush}"/>
-
-                    <Border Margin="0,24,0,0"
-                            Padding="18,14"
-                            Background="#14192E"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="9">
-                        <TextBlock Text="Manual ZIP, RAR, and 7Z imports and drag and drop installation are ready now. No Nexus API requests are made by this Early Access build."
+                                   FontSize="20"
+                                   FontWeight="Bold"/>
+                        <TextBlock x:Name="BrowserUnavailableText"
+                                   Margin="0,10,0,0"
+                                   Text="Install or repair Microsoft Edge WebView2, then reopen Limelight."
                                    TextAlignment="Center"
                                    TextWrapping="Wrap"
                                    FontSize="12"
-                                   LineHeight="18"
-                                   Foreground="#C8C6D8"/>
-                    </Border>
-                </StackPanel>
+                                   Foreground="{StaticResource MutedTextBrush}"/>
+                    </StackPanel>
+                </Border>
 
-                <StackPanel Grid.Row="1"
-                            HorizontalAlignment="Center"
-                            Orientation="Horizontal">
-                    <Border Padding="12,7"
-                            Background="#2A1830"
-                            BorderBrush="{StaticResource PinkBrush}"
-                            BorderThickness="1"
-                            CornerRadius="7">
-                        <TextBlock Text="UNDER CONSTRUCTION"
-                                   FontSize="9"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource PinkBrush}"/>
-                    </Border>
+                <Border x:Name="DownloadStatusPanel"
+                        Grid.Row="2"
+                        Visibility="Collapsed"
+                        Padding="14,11"
+                        Background="#111A2B"
+                        BorderBrush="{StaticResource CyanBrush}"
+                        BorderThickness="0,1,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="230"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock x:Name="DownloadStatusTitle"
+                                       Text="NEXUS DOWNLOAD"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource CyanBrush}"/>
+                            <TextBlock x:Name="DownloadStatusText"
+                                       Margin="0,4,16,0"
+                                       Text="Waiting for Nexus Mods."
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{StaticResource MutedTextBrush}"/>
+                        </StackPanel>
+                        <ProgressBar x:Name="DownloadProgressBar"
+                                     Grid.Column="1"
+                                     Height="8"
+                                     VerticalAlignment="Center"
+                                     Minimum="0"
+                                     Maximum="100"
+                                     IsIndeterminate="True"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
 
-                    <Border Margin="10,0,0,0"
-                            Padding="12,7"
-                            Background="#1A1E35"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="7">
-                        <TextBlock Text="AWAITING APPROVAL"
-                                   FontSize="9"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource CyanBrush}"/> 
-                    </Border>
-                </StackPanel>
-            </Grid> 
-        </Border> -->
+        <Border Grid.Row="2"
+                Margin="0,12,0,0"
+                Padding="13,10"
+                Background="#121528"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+            <TextBlock Text="Use Nexus's regular Manual Download flow. Mod Manager Download links use the nxm protocol and cannot be resolved after removing the Nexus API."
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource MutedTextBrush}"/>
+        </Border>
     </Grid>
 </UserControl>

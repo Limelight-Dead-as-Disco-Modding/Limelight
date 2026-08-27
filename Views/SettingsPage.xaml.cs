@@ -1,4 +1,4 @@
-﻿using Limelight.Models;
+using Limelight.Models;
 using Limelight.Services;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,33 +27,9 @@ namespace Limelight.Views
         {
             InitializeComponent();
 
-            NexusRequestIdentityText.Text =
-                $"LIMELIGHT {NexusApiService.ApplicationVersion.ToUpperInvariant()}";
-
-            if (NexusApiService.IntegrationEnabled)
-            {
-                ShowNexusRegistrationStatus(
-                    NexusApiService.RegistrationSubmitted);
-            }
-            else
-            {
-                ShowNexusUnavailable();
-            }
         }
 
-        public void ShowNexusRegistrationStatus(
-            bool submitted)
-        {
-            NexusRegistrationStatusText.Text =
-                submitted
-                    ? "SUBMITTED"
-                    : "READY TO SUBMIT";
-
-            NexusRegistrationStatusText.Foreground =
-                StatusBrush(submitted);
-        }
-
-        public void ShowDiscordPresence(
+        public void ShowDiscordPresence(        public void ShowDiscordPresence(
             bool enabled)
         {
             _discordPresenceEnabled =
@@ -257,180 +233,6 @@ namespace Limelight.Views
             SettingsCategoryTabs.SelectedIndex = 3;
         }
 
-        public void ShowNexusCategory()
-        {
-            SettingsCategoryTabs.SelectedIndex = 2;
-        }
-
-        public void ShowNexusStatus(
-    bool isConnected,
-    string? accountName,
-    bool isBusy = false)
-        {
-            if (!NexusApiService.IntegrationEnabled)
-            {
-                ShowNexusUnavailable();
-                return;
-            }
-
-            bool healthy =
-                isConnected ||
-                isBusy;
-
-            NexusConnectionStatusText.Text =
-                isBusy
-                    ? "CONNECTING"
-                    : isConnected
-                        ? "CONNECTED"
-                        : "NOT CONNECTED";
-
-            NexusConnectionStatusText.Foreground =
-                StatusBrush(healthy);
-
-            string displayName =
-                string.IsNullOrWhiteSpace(accountName)
-                    ? "Your Nexus account"
-                    : accountName;
-
-            NexusAccountDetailText.Text =
-                isBusy
-                    ? "Limelight is checking your Nexus API key."
-                    : isConnected
-                        ? $"{displayName} is connected. Nexus browsing and downloads are ready."
-                        : "Connect a personal API key to test browsing and downloads inside Limelight.";
-
-            NexusApiKeyBox.IsEnabled =
-                !isConnected &&
-                !isBusy;
-
-            NexusConnectButton.IsEnabled =
-                !isConnected &&
-                !isBusy;
-
-            NexusDisconnectButton.IsEnabled =
-                isConnected &&
-                !isBusy;
-
-            NexusConnectButton.Opacity =
-                NexusConnectButton.IsEnabled
-                    ? 1
-                    : 0.45;
-
-            NexusDisconnectButton.Opacity =
-                NexusDisconnectButton.IsEnabled
-                    ? 1
-                    : 0.45;
-
-            NexusAccessBadgeText.Text =
-                isBusy
-                    ? "CHECKING"
-                    : isConnected
-                        ? "API READY"
-                        : "TESTING ACCESS";
-
-            NexusAccessBadgeText.Foreground =
-                StatusBrush(healthy);
-
-            if (isConnected)
-            {
-                // I keep the API key hidden after it is accepted.
-                NexusApiKeyBox.Password =
-                    string.Empty;
-            }
-        }
-
-        public void ShowNexusUnavailable()
-        {
-            NexusRegistrationStatusText.Text =
-                "AWAITING APPROVAL";
-
-            NexusRegistrationStatusText.Foreground =
-                StatusBrush(isHealthy: false);
-
-            NexusConnectionStatusText.Text =
-                "UNDER CONSTRUCTION";
-
-            NexusConnectionStatusText.Foreground =
-                StatusBrush(isHealthy: false);
-
-            NexusAccountDetailText.Text =
-                "Nexus authentication, browsing, and downloads are paused during Early Access. Any saved credential remains protected on this Windows account.";
-
-            NexusApiKeyBox.Password =
-                string.Empty;
-
-            NexusApiKeyBox.IsEnabled = false;
-            NexusConnectButton.IsEnabled = false;
-            NexusDisconnectButton.IsEnabled = false;
-            NexusConnectButton.Opacity = 0.45;
-            NexusDisconnectButton.Opacity = 0.45;
-
-            NexusAccessBadgeText.Text =
-                "EARLY ACCESS";
-
-            NexusAccessBadgeText.Foreground =
-                StatusBrush(isHealthy: false);
-
-            NexusTestingStatusText.Text =
-                "NO API REQUESTS";
-
-            NexusSessionRequestCountText.Text = "0";
-            NexusHourlyRemainingText.Text = "PAUSED";
-            NexusDailyRemainingText.Text = "PAUSED";
-            NexusLastRequestText.Text =
-                "NEXUS APPROVAL PENDING";
-        }
-
-        public void ShowNexusUsage(
-    NexusApiUsageSnapshot snapshot)
-        {
-            ArgumentNullException.ThrowIfNull(snapshot);
-
-            if (!NexusApiService.IntegrationEnabled)
-            {
-                ShowNexusUnavailable();
-                return;
-            }
-
-            NexusSessionRequestCountText.Text =
-                snapshot.RequestsThisSession.ToString("N0");
-
-            NexusHourlyRemainingText.Text =
-                snapshot.HourlyRemaining?.ToString("N0") ??
-                "UNKNOWN";
-
-            NexusDailyRemainingText.Text =
-                snapshot.DailyRemaining?.ToString("N0") ??
-                "UNKNOWN";
-
-            NexusLastRequestText.Text =
-                snapshot.LastRequestUtc.HasValue
-                    ? $"{snapshot.LastRequestKind} • " +
-                      $"{snapshot.LastRequestUtc.Value.ToLocalTime():dd MMM yyyy HH:mm:ss}"
-                    : "NONE YET";
-
-            bool testingIsSafe =
-                snapshot.HasQuotaInformation &&
-                !snapshot.ShouldPauseRequests;
-
-            NexusTestingStatusText.Text =
-                snapshot.ShouldPauseRequests
-                    ? "REQUESTS PAUSED"
-                    : snapshot.HasQuotaInformation
-                        ? "WITHIN TEST LIMITS"
-                        : "WAITING FOR QUOTA";
-
-            // I use the same colour language as the rest of Limelight.
-            // Cyan means testing is safe, while pink needs attention.
-            NexusTestingStatusText.Foreground =
-                StatusBrush(testingIsSafe);
-
-            NexusHourlyRemainingText.Foreground =
-                StatusBrush(testingIsSafe);
-
-            NexusDailyRemainingText.Foreground =
-                StatusBrush(testingIsSafe);
-        }
         private string CreateSessionDetail(
             LiveSessionState session,
             bool isGameRunning)
@@ -514,41 +316,6 @@ namespace Limelight.Views
             CreatePrivateTestReportRequested?.Invoke();
         }
 
-        private void NexusConnectButton_Click(
-    object sender,
-    RoutedEventArgs e)
-        {
-            string apiKey =
-                NexusApiKeyBox.Password.Trim();
-
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                NexusConnectionStatusText.Text =
-                    "API KEY REQUIRED";
-
-                NexusConnectionStatusText.Foreground =
-                    StatusBrush(isHealthy: false);
-
-                NexusAccountDetailText.Text =
-                    "Paste your personal Nexus Mods API key before connecting.";
-
-                return;
-            }
-
-            ShowNexusStatus(
-                isConnected: false,
-                accountName: null,
-                isBusy: true);
-
-            NexusConnectRequested?.Invoke(apiKey);
-        }
-
-        private void NexusDisconnectButton_Click(
-            object sender,
-            RoutedEventArgs e)
-        {
-            NexusDisconnectRequested?.Invoke();
-        }
         private void ChangeGameFolderButton_Click(
             object sender,
             RoutedEventArgs e)
@@ -572,3 +339,4 @@ namespace Limelight.Views
         }
     }
 }
+

@@ -67,12 +67,6 @@ namespace Limelight.Models
         public string DismissedLiveLoaderPromptForGameDirectory { get; set; } =
             string.Empty;
 
-        public string ProtectedNexusApiKey { get; set; } =
-    string.Empty;
-
-        public string NexusAccountName { get; set; } =
-            string.Empty;
-
         // Profiles are reusable casts. They stay separate from the current
         // X19 rotation until the user chooses to add or apply one.
         public List<ModProfile> ModProfiles { get; set; } =
