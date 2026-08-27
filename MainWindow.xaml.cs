@@ -4936,9 +4936,22 @@ namespace Limelight
 
             if (!isEnabled)
             {
+                string selectedReplacementTarget =
+                    selectedMod.ConventionalReplacementTarget;
+
                 List<InstalledMod> conflicts =
                     FindEnabledConventionalConflicts(
-                        selectedMod);
+                            selectedMod)
+                        .Where(conflict =>
+                            string.IsNullOrWhiteSpace(
+                                selectedReplacementTarget) ||
+                            string.IsNullOrWhiteSpace(
+                                conflict.ConventionalReplacementTarget) ||
+                            string.Equals(
+                                selectedReplacementTarget,
+                                conflict.ConventionalReplacementTarget,
+                                StringComparison.OrdinalIgnoreCase))
+                        .ToList();
 
                 if (conflicts.Count > 0)
                 {

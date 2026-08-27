@@ -187,6 +187,10 @@ namespace Limelight.Models
             }
         }
 
+        [JsonIgnore]
+        public string ConventionalReplacementTarget =>
+            GetFriendlyReplacementTarget();
+
         private string GetFriendlyReplacementTarget()
         {
             // I only name targets we have confirmed in the game files so a
