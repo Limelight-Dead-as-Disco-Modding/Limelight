@@ -104,7 +104,8 @@
                                         <TextBlock Text="SETTINGS"
                                                    Margin="0,5,0,0"
                                                    FontSize="22"
-                                                   FontWeight="Bold"/>
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource TextBrush}"/>
                                         <TextBlock Text="Tune Limelight without digging through long menus."
                                                    Margin="0,8,0,0"
                                                    FontSize="11"
