@@ -33,63 +33,6 @@ namespace Limelight.Services
                 .ThenByDescending(record => record.StartedAt)
                 .ToList();
 
-        public NexusDownloadRecord Begin(
-            NexusModFile file,
-            string modName)
-        {
-            ArgumentNullException.ThrowIfNull(file);
-
-            var record = new NexusDownloadRecord
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                ModId = file.ModId,
-                FileId = file.FileId,
-                ModName = modName,
-                FileName = file.FileName,
-                Version = file.Version,
-                Status = NexusDownloadStatus.Queued,
-                TotalBytes = file.SizeKilobytes > 0
-                    ? file.SizeKilobytes * 1024L
-                    : null,
-                StatusMessage = "Requesting a secure Nexus download.",
-                StartedAt = DateTimeOffset.UtcNow
-            };
-
-            _records.Insert(0, record);
-            TrimFinishedRecords();
-            Save();
-
-            return record;
-        }
-
-        public void ReportProgress(
-            string recordId,
-            NexusDownloadProgress progress)
-        {
-            NexusDownloadRecord? record =
-                Find(recordId);
-
-            if (record is null)
-            {
-                return;
-            }
-
-            record.Status =
-                NexusDownloadStatus.Downloading;
-
-            record.BytesReceived =
-                progress.BytesReceived;
-
-            if (progress.TotalBytes is > 0)
-            {
-                record.TotalBytes =
-                    progress.TotalBytes;
-            }
-
-            record.StatusMessage =
-                "Downloading and checking the archive.";
-        }
-
         public void MarkInstalling(
             string recordId)
         {
@@ -208,8 +151,8 @@ namespace Limelight.Services
                 foreach (NexusDownloadRecord record in
                     _records.Where(record => record.IsActive))
                 {
-                    // Limelight cannot resume a Nexus link after restarting,
-                    // so I keep the entry and make its interrupted state clear.
+                    // I cannot resume an interrupted browser download, so I keep
+                    // its history entry and make the stopped state clear.
                     record.Status =
                         NexusDownloadStatus.Interrupted;
 
@@ -292,12 +235,12 @@ namespace Limelight.Services
             }
             catch (IOException)
             {
-                // The live transfer should continue even if Windows briefly
-                // prevents Limelight from updating its optional history file.
+                // I let the transfer continue when Windows briefly prevents me
+                // from updating the optional history file.
             }
             catch (UnauthorizedAccessException)
             {
-                // History is helpful, but it must never block a valid download.
+                // I treat history as optional so it never blocks a valid download.
             }
         }
     }

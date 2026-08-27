@@ -114,9 +114,7 @@ namespace Limelight
         private readonly CompatibilityService _compatibilityService;
         private readonly DiagnosticReportService _diagnosticReportService;
         private readonly PrivateTestReportService _privateTestReportService;
-        private readonly NexusApiService _nexusApiService;
         private readonly DownloadHistoryService _downloadHistoryService;
-        private readonly NexusCredentialService _nexusCredentialService;
         private readonly DiscordPresenceService _discordPresenceService;
         private readonly GitHubReleaseUpdateService _updateService;
         private ResourceUsageOverlayWindow? _resourceUsageOverlayWindow;
