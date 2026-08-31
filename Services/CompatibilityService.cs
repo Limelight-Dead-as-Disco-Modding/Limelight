@@ -24,7 +24,7 @@ namespace Limelight.Services
             "6 AUGUST 2026 · 21:30 UTC";
 
         public const string SupportedNativeBridgeVersion =
-            "0.1.13";
+            "0.1.14";
 
         private const string SteamAppId =
             "3404260";

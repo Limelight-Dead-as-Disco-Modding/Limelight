@@ -37,9 +37,10 @@
     <None Remove="Payloads\NativeBridge\LimelightNativeBridge-0.1.9.dll" />
     <None Remove="Payloads\NativeBridge\LimelightNativeBridge-0.1.10.dll" />
     <None Remove="Payloads\NativeBridge\LimelightNativeBridge-0.1.13.dll" />
+    <None Remove="Payloads\NativeBridge\LimelightNativeBridge-0.1.14.dll" />
     <None Remove="Payloads\NativeBridge\bridge-manifest.json" />
 
-    <EmbeddedResource Include="Payloads\NativeBridge\LimelightNativeBridge-0.1.13.dll" LogicalName="Limelight.Payloads.NativeBridge.LimelightNativeBridge.dll" />
+    <EmbeddedResource Include="Payloads\NativeBridge\LimelightNativeBridge-0.1.14.dll" LogicalName="Limelight.Payloads.NativeBridge.LimelightNativeBridge.dll" />
 
     <EmbeddedResource Include="Payloads\NativeBridge\bridge-manifest.json" LogicalName="Limelight.Payloads.NativeBridge.bridge-manifest.json" />
   </ItemGroup>
