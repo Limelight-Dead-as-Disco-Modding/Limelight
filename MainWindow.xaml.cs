@@ -118,7 +118,7 @@ namespace Limelight
         private readonly PrivateTestReportService _privateTestReportService;
         private readonly DownloadHistoryService _downloadHistoryService;
         private readonly DiscordPresenceService _discordPresenceService;
-        private readonly GitHubReleaseUpdateService _updateService;
+        private readonly WebsiteManifestUpdateService _updateService;
         private ResourceUsageOverlayWindow? _resourceUsageOverlayWindow;
 
         private string _discordPresenceSwitchTarget =
@@ -270,7 +270,7 @@ namespace Limelight
             _downloadHistoryService =
                 new DownloadHistoryService();
             _updateService =
-                new GitHubReleaseUpdateService();
+                new WebsiteManifestUpdateService();
 
             _settings =
                 _settingsService.Load();
@@ -838,12 +838,16 @@ namespace Limelight
 
         private async Task CheckForUpdatesAsync()
         {
-            GitHubReleaseUpdate? update =
+            LimelightUpdateCheckResult result =
                 await _updateService.CheckForUpdateAsync(
                     GetCurrentVersion());
 
-            if (update == null ||
-                !IsLoaded ||
+            LimelightUpdateNotice? update =
+                result.Update;
+
+            if (result.Status !=
+                    LimelightUpdateCheckStatus.UpdateAvailable ||
+                update == null ||
                 string.Equals(
                     _settings.LastSeenUpdateVersion,
                     update.Version,
@@ -865,7 +869,7 @@ namespace Limelight
         }
 
         private void ShowPendingUpdateDialog(
-            GitHubReleaseUpdate update)
+            LimelightUpdateNotice update)
         {
             ShowUpdateAvailableDialog(update);
 
@@ -873,7 +877,7 @@ namespace Limelight
         }
 
         private void ShowUpdateAvailableDialog(
-            GitHubReleaseUpdate update)
+            LimelightUpdateNotice update)
         {
             string updateTitle =
                 string.IsNullOrWhiteSpace(update.Name)
@@ -1078,7 +1082,7 @@ namespace Limelight
 
             try
             {
-                GitHubReleaseUpdate? update =
+                LimelightUpdateCheckResult result =
                     await _updateService.CheckForUpdateAsync(
                         GetCurrentVersion());
 
@@ -1087,7 +1091,21 @@ namespace Limelight
                     return;
                 }
 
-                if (update == null)
+                if (result.Status ==
+                    LimelightUpdateCheckStatus.Unavailable)
+                {
+                    ShowNotification(
+                        "UPDATE CHECK FAILED",
+                        result.Message ??
+                        "Limelight could not reach the update website.",
+                        isError: true);
+
+                    return;
+                }
+
+                if (result.Status ==
+                        LimelightUpdateCheckStatus.UpToDate ||
+                    result.Update == null)
                 {
                     ShowNotification(
                         "UPDATE CHECK COMPLETE",
@@ -1097,7 +1115,11 @@ namespace Limelight
                     return;
                 }
 
-                ShowUpdateAvailableDialog(update);
+                LimelightUpdateNotice update =
+                    result.Update;
+
+                ShowUpdateAvailableDialog(
+                    update);
 
                 MarkUpdateVersionSeen(update.Version);
             }

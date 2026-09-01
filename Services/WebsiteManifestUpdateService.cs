@@ -1,28 +1,44 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Limelight.Services
 {
-    public sealed record GitHubReleaseUpdate(
+    public enum LimelightUpdateCheckStatus
+    {
+        UpToDate,
+        UpdateAvailable,
+        Unavailable
+    }
+
+    public sealed record LimelightUpdateNotice(
         string Version,
         string Name,
         string Url,
         string? Body,
         string? InstallerUrl);
 
-    public sealed class GitHubReleaseUpdateService
+    public sealed record LimelightUpdateCheckResult(
+        LimelightUpdateCheckStatus Status,
+        LimelightUpdateNotice? Update = null,
+        string? Message = null);
+
+    public sealed class WebsiteManifestUpdateService
     {
-        private const string ReleasesEndpoint =
-            "https://api.github.com/repos/Henreh1/Limelight/releases?per_page=10";
+        private const string ManifestEndpoint =
+            "https://limelight-dead-as-disco-modding.github.io/LimelightWiki/updates/limelight-early-access.json";
+
+        private const int SupportedSchemaVersion =
+            1;
 
         private static readonly HttpClient Client =
             CreateClient();
 
-        public async Task<GitHubReleaseUpdate?> CheckForUpdateAsync(
+        public async Task<LimelightUpdateCheckResult> CheckForUpdateAsync(
             string currentVersion,
             CancellationToken cancellationToken = default)
         {
@@ -31,7 +47,8 @@ namespace Limelight.Services
                     out ParsedVersion? installedVersion) ||
                 installedVersion == null)
             {
-                return null;
+                return Unavailable(
+                    "Limelight could not read the version of this installation.");
             }
 
             try
@@ -43,10 +60,20 @@ namespace Limelight.Services
                 timeout.CancelAfter(
                     TimeSpan.FromSeconds(6));
 
+                string requestUrl =
+                    $"{ManifestEndpoint}?check={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
                 using HttpRequestMessage request =
                     new HttpRequestMessage(
                         HttpMethod.Get,
-                        ReleasesEndpoint);
+                        requestUrl);
+
+                request.Headers.CacheControl =
+                    new CacheControlHeaderValue
+                    {
+                        NoCache = true,
+                        NoStore = true
+                    };
 
                 using HttpResponseMessage response =
                     await Client.SendAsync(
@@ -56,7 +83,8 @@ namespace Limelight.Services
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    return null;
+                    return Unavailable(
+                        "The Limelight website did not return update information.");
                 }
 
                 await using Stream content =
@@ -68,178 +96,116 @@ namespace Limelight.Services
                         content,
                         cancellationToken: timeout.Token);
 
-                GitHubReleaseUpdate? newestRelease =
-                    null;
+                JsonElement manifest =
+                    document.RootElement;
 
-                ParsedVersion? newestVersion =
-                    null;
-
-                foreach (JsonElement release in
-                    document.RootElement.EnumerateArray())
+                if (manifest.ValueKind != JsonValueKind.Object ||
+                    !TryReadInteger(
+                        manifest,
+                        "schemaVersion",
+                        out int schemaVersion) ||
+                    schemaVersion != SupportedSchemaVersion ||
+                    !TryReadString(
+                        manifest,
+                        "product",
+                        out string product) ||
+                    !string.Equals(
+                        product,
+                        "Limelight",
+                        StringComparison.Ordinal) ||
+                    !TryReadString(
+                        manifest,
+                        "channel",
+                        out string channel) ||
+                    !string.Equals(
+                        channel,
+                        "early-access",
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    if (release.TryGetProperty(
-                            "draft",
-                            out JsonElement draft) &&
-                        draft.GetBoolean())
-                    {
-                        continue;
-                    }
-
-                    if (!TryReadString(
-                            release,
-                            "tag_name",
-                            out string tagName) ||
-                        !TryParseVersion(
-                            tagName,
-                            out ParsedVersion? releaseVersion) ||
-                        releaseVersion == null)
-                    {
-                        continue;
-                    }
-
-                    if (!TryReadString(
-                            release,
-                            "html_url",
-                            out string releaseUrl) ||
-                        !Uri.TryCreate(
-                            releaseUrl,
-                            UriKind.Absolute,
-                            out Uri? releaseUri) ||
-                        !string.Equals(
-                            releaseUri.Host,
-                            "github.com",
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    if (newestVersion != null &&
-                        CompareVersions(
-                            releaseVersion,
-                            newestVersion) <= 0)
-                    {
-                        continue;
-                    }
-
-                    string releaseName =
-                        TryReadString(
-                            release,
-                            "name",
-                            out string name) &&
-                        !string.IsNullOrWhiteSpace(name)
-                            ? name
-                            : tagName;
-
-                    string? releaseNotes =
-                        TryReadString(
-                            release,
-                            "body",
-                            out string body)
-                            ? body
-                            : null;
-
-                    string? installerUrl =
-                        TryReadInstallerAssetUrl(release);
-
-                    newestVersion =
-                        releaseVersion;
-
-                    newestRelease =
-                        new GitHubReleaseUpdate(
-                            tagName,
-                            releaseName,
-                            releaseUri.AbsoluteUri,
-                            releaseNotes,
-                            installerUrl);
+                    return Unavailable(
+                        "The Limelight website returned unsupported update information.");
                 }
 
-                if (newestRelease == null ||
-                    newestVersion == null ||
-                    CompareVersions(
-                        newestVersion,
+                if (!TryReadString(
+                        manifest,
+                        "latestVersion",
+                        out string latestVersionText) ||
+                    !TryParseVersion(
+                        latestVersionText,
+                        out ParsedVersion? latestVersion) ||
+                    latestVersion == null ||
+                    !TryReadTrustedGitHubUrl(
+                        manifest,
+                        "releaseUrl",
+                        out string releaseUrl))
+                {
+                    return Unavailable(
+                        "The Limelight website returned incomplete update information.");
+                }
+
+                if (CompareVersions(
+                        latestVersion,
                         installedVersion) <= 0)
                 {
-                    return null;
+                    return new LimelightUpdateCheckResult(
+                        LimelightUpdateCheckStatus.UpToDate);
                 }
 
-                return newestRelease;
+                string releaseName =
+                    TryReadString(
+                        manifest,
+                        "releaseName",
+                        out string name)
+                        ? name
+                        : latestVersionText;
+
+                string? releaseNotes =
+                    TryReadOptionalString(
+                        manifest,
+                        "notes");
+
+                string? downloadUrl =
+                    TryReadOptionalTrustedGitHubUrl(
+                        manifest,
+                        "downloadUrl");
+
+                return new LimelightUpdateCheckResult(
+                    LimelightUpdateCheckStatus.UpdateAvailable,
+                    new LimelightUpdateNotice(
+                        latestVersionText,
+                        releaseName,
+                        releaseUrl,
+                        releaseNotes,
+                        downloadUrl));
             }
             catch (OperationCanceledException)
             {
-                return null;
+                return Unavailable(
+                    "The update check timed out. Please try again shortly.");
             }
             catch (HttpRequestException)
             {
-                return null;
+                return Unavailable(
+                    "Limelight could not reach the update website.");
             }
             catch (JsonException)
             {
-                return null;
+                return Unavailable(
+                    "The update website returned unreadable information.");
+            }
+            catch (IOException)
+            {
+                return Unavailable(
+                    "Limelight could not finish reading the update information.");
             }
         }
 
-        private static string? TryReadInstallerAssetUrl(
-            JsonElement release)
+        private static LimelightUpdateCheckResult Unavailable(
+            string message)
         {
-            if (!release.TryGetProperty(
-                    "assets",
-                    out JsonElement assets) ||
-                assets.ValueKind != JsonValueKind.Array)
-            {
-                return null;
-            }
-
-            string? firstExecutableAssetUrl = null;
-
-            foreach (JsonElement asset in
-                assets.EnumerateArray())
-            {
-                if (!TryReadString(
-                        asset,
-                        "browser_download_url",
-                        out string downloadUrl) ||
-                    !TryReadString(
-                        asset,
-                        "name",
-                        out string assetName))
-                {
-                    continue;
-                }
-
-                if (!IsExecutableAsset(assetName))
-                {
-                    continue;
-                }
-
-                if (firstExecutableAssetUrl == null)
-                {
-                    firstExecutableAssetUrl =
-                        downloadUrl;
-                }
-
-                if (assetName.Contains(
-                        "limelight",
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    return downloadUrl;
-                }
-            }
-
-            return firstExecutableAssetUrl;
-        }
-
-        private static bool IsExecutableAsset(
-            string assetName)
-        {
-            return assetName.EndsWith(
-                       ".exe",
-                       StringComparison.OrdinalIgnoreCase) ||
-                   assetName.EndsWith(
-                       ".msi",
-                       StringComparison.OrdinalIgnoreCase) ||
-                   assetName.EndsWith(
-                       ".zip",
-                       StringComparison.OrdinalIgnoreCase);
+            return new LimelightUpdateCheckResult(
+                LimelightUpdateCheckStatus.Unavailable,
+                Message: message);
         }
 
         private static HttpClient CreateClient()
@@ -251,13 +217,25 @@ namespace Limelight.Services
                 "Limelight-Update-Checker");
 
             client.DefaultRequestHeaders.Accept.ParseAdd(
-                "application/vnd.github+json");
-
-            client.DefaultRequestHeaders.Add(
-                "X-GitHub-Api-Version",
-                "2022-11-28");
+                "application/json");
 
             return client;
+        }
+
+        private static bool TryReadInteger(
+            JsonElement element,
+            string propertyName,
+            out int value)
+        {
+            value =
+                0;
+
+            return element.TryGetProperty(
+                       propertyName,
+                       out JsonElement property) &&
+                   property.ValueKind == JsonValueKind.Number &&
+                   property.TryGetInt32(
+                       out value);
         }
 
         private static bool TryReadString(
@@ -271,8 +249,7 @@ namespace Limelight.Services
             if (!element.TryGetProperty(
                     propertyName,
                     out JsonElement property) ||
-                property.ValueKind !=
-                    JsonValueKind.String)
+                property.ValueKind != JsonValueKind.String)
             {
                 return false;
             }
@@ -282,6 +259,72 @@ namespace Limelight.Services
                 string.Empty;
 
             return !string.IsNullOrWhiteSpace(value);
+        }
+
+        private static string? TryReadOptionalString(
+            JsonElement element,
+            string propertyName)
+        {
+            return TryReadString(
+                element,
+                propertyName,
+                out string value)
+                    ? value
+                    : null;
+        }
+
+        private static bool TryReadTrustedGitHubUrl(
+            JsonElement element,
+            string propertyName,
+            out string value)
+        {
+            value =
+                string.Empty;
+
+            if (!TryReadString(
+                    element,
+                    propertyName,
+                    out string candidate) ||
+                !Uri.TryCreate(
+                    candidate,
+                    UriKind.Absolute,
+                    out Uri? uri) ||
+                !string.Equals(
+                    uri.Scheme,
+                    Uri.UriSchemeHttps,
+                    StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(
+                    uri.Host,
+                    "github.com",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            value =
+                uri.AbsoluteUri;
+
+            return true;
+        }
+
+        private static string? TryReadOptionalTrustedGitHubUrl(
+            JsonElement element,
+            string propertyName)
+        {
+            if (!element.TryGetProperty(
+                    propertyName,
+                    out JsonElement property) ||
+                property.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+
+            return TryReadTrustedGitHubUrl(
+                element,
+                propertyName,
+                out string value)
+                    ? value
+                    : null;
         }
 
         private static bool TryParseVersion(
