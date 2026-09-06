@@ -1931,14 +1931,16 @@ namespace Limelight
                 payloadValid,
                 _multiplayerSessionService.FindTailscaleIpv4Address(),
                 _multiplayerPayloadService.ReadInstalledRole(
-                    installation));
+                    installation),
+                _multiplayerSessionService.FindLocalNetworkIpv4Addresses());
         }
 
-        private async void HostMultiplayerRequested()
+        private async void HostMultiplayerRequested(MultiplayerHostOptions options)
         {
             await StartMultiplayerSessionAsync(
                 MultiplayerRole.Host,
-                friendCode: null);
+                friendCode: null,
+                options);
         }
 
         private async void JoinMultiplayerRequested(
@@ -1951,7 +1953,8 @@ namespace Limelight
 
         private async Task StartMultiplayerSessionAsync(
             MultiplayerRole role,
-            string? friendCode)
+            string? friendCode,
+            MultiplayerHostOptions? hostOptions = null)
         {
             if (_isMultiplayerActionRunning)
             {
@@ -2043,7 +2046,8 @@ namespace Limelight
                     await Task.Run(() =>
                         role == MultiplayerRole.Host
                             ? _multiplayerSessionService.StartHost(
-                                installation)
+                                installation,
+                                hostOptions)
                             : _multiplayerSessionService.StartClient(
                                 installation,
                                 friendCode ?? string.Empty));

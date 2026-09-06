@@ -10,8 +10,9 @@ namespace Limelight.Views
     public partial class MultiplayerPage : UserControl
     {
         private bool _hasActiveSession;
+        private bool _isReady;
 
-        public event Action? HostRequested;
+        public event Action<MultiplayerHostOptions>? HostRequested;
 
         public event Action<string>? JoinRequested;
 
@@ -24,6 +25,10 @@ namespace Limelight.Views
         public MultiplayerPage()
         {
             InitializeComponent();
+
+            VersionText.Text = $"MP v{LimelightMpPayloadService.Version}";
+            VersionNoticeText.Text = $"Use the same game build and LimelightMP v{LimelightMpPayloadService.Version} on both PCs. Level transitions, cameras, dialogue, rhythm sync, local menus and effects are still being hardened.";
+            UpdateHostRouteControls();
 
             SessionLogBox.Document =
                 new FlowDocument
@@ -42,13 +47,22 @@ namespace Limelight.Views
             bool ue4ssInstalled,
             bool embeddedPayloadValid,
             string? tailscaleAddress,
-            MultiplayerInstalledRole? installedRole)
+            MultiplayerInstalledRole? installedRole,
+            IReadOnlyCollection<string> localAddresses)
         {
             bool ready =
                 gameConnected &&
                 !gameRunning &&
                 ue4ssInstalled &&
                 embeddedPayloadValid;
+
+            _isReady = ready;
+            string? previousAddress = LocalAddressComboBox.SelectedItem as string;
+            LocalAddressComboBox.ItemsSource = localAddresses;
+            LocalAddressComboBox.SelectedItem =
+                previousAddress is not null && localAddresses.Contains(previousAddress)
+                    ? previousAddress
+                    : localAddresses.FirstOrDefault();
 
             ReadinessTitleText.Text =
                 ready
@@ -71,10 +85,10 @@ namespace Limelight.Views
                         ? "UE4SS ready"
                         : "UE4SS not ready",
                     embeddedPayloadValid
-                        ? "v0.1.0 payload verified"
+                        ? $"v{LimelightMpPayloadService.Version} payload verified"
                         : "payload verification failed",
                     string.IsNullOrWhiteSpace(tailscaleAddress)
-                        ? "Tailscale not detected"
+                        ? $"Tailscale not detected · {localAddresses.Count} local-network address(es)"
                         : $"Tailscale {tailscaleAddress}"
                 };
 
@@ -126,6 +140,8 @@ namespace Limelight.Views
                     ? "Your friend runs Join in their own Limelight. In the Dive Bar, press Ctrl+Shift+F5 once to begin hosting."
                     : $"Your local game will connect to {session.Address}:{session.GamePort}. Leave Limelight open while playing.";
 
+            SessionDetailText.Text += $"\n{session.RouteDescription}. {session.RouteNotice}";
+
             FriendCodeText.Text =
                 session.FriendCode;
 
@@ -136,6 +152,7 @@ namespace Limelight.Views
 
             HostButton.IsEnabled = false;
             JoinButton.IsEnabled = false;
+            UpdateHostRouteControls();
         }
 
         public void ShowIdle()
@@ -161,12 +178,15 @@ namespace Limelight.Views
             BusyText.Text = message;
             HostButton.IsEnabled =
                 !isBusy &&
-                !_hasActiveSession;
+                !_hasActiveSession &&
+                _isReady;
 
             JoinButton.IsEnabled =
                 !isBusy &&
-                !_hasActiveSession;
+                !_hasActiveSession &&
+                _isReady;
             FriendCodeTextBox.IsEnabled = !isBusy;
+            UpdateHostRouteControls();
         }
 
         public void AddLog(
@@ -234,7 +254,42 @@ namespace Limelight.Views
             object sender,
             RoutedEventArgs e)
         {
-            HostRequested?.Invoke();
+            HostRequested?.Invoke(new MultiplayerHostOptions
+            {
+                Route = (MultiplayerHostRoute)HostRouteComboBox.SelectedIndex,
+                Address = HostRouteComboBox.SelectedIndex == 1
+                    ? LocalAddressComboBox.SelectedItem as string ?? string.Empty
+                    : DirectAddressTextBox.Text
+            });
+        }
+
+        private void HostRoute_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateHostRouteControls();
+        }
+
+        private void UpdateHostRouteControls()
+        {
+            if (LocalAddressComboBox is null || DirectAddressTextBox is null ||
+                HostRouteNoticeText is null || BusyText is null)
+            {
+                return;
+            }
+
+            bool enabled = !IsBusy() && !_hasActiveSession;
+            HostRouteComboBox.IsEnabled = enabled;
+            LocalAddressComboBox.IsEnabled = enabled;
+            DirectAddressTextBox.IsEnabled = enabled;
+            LocalAddressComboBox.Visibility = HostRouteComboBox.SelectedIndex == 1
+                ? Visibility.Visible : Visibility.Collapsed;
+            DirectAddressTextBox.Visibility = HostRouteComboBox.SelectedIndex == 2
+                ? Visibility.Visible : Visibility.Collapsed;
+            HostRouteNoticeText.Text = HostRouteComboBox.SelectedIndex switch
+            {
+                1 => "Choose the address on the LAN shared with your friend. No VPN is required on a reachable LAN. The game and relay need UDP 7777 and 7778 allowed through Windows Firewall.",
+                2 => "Enter an IPv4 address your friend can reach. Internet play needs existing routing/port forwarding for BOTH UDP 7777 (game) and 7778 (input). Limelight does not change firewall or router settings.",
+                _ => "Uses Tailscale when connected; otherwise the code works only on this PC. For two PCs on the same LAN, choose Local network."
+            };
         }
 
         private void Join_Click(

@@ -52,23 +52,19 @@ namespace Limelight.Services
             _sessionLogPath;
 
         public MultiplayerStartResult StartHost(
-            Ue4ssDetectionResult installation)
+            Ue4ssDetectionResult installation,
+            MultiplayerHostOptions? options = null)
         {
+            MultiplayerResolvedRoute route =
+                LimelightMpTransportPolicy.ResolveHost(
+                    options ?? new MultiplayerHostOptions(),
+                    FindTailscaleIpv4Address(),
+                    FindLocalNetworkIpv4Addresses());
+
             EnsureNoActiveSession();
             BeginLog(MultiplayerRole.Host);
 
-            string tailscaleAddress =
-                FindTailscaleIpv4Address() ??
-                string.Empty;
-
-            bool tailscaleDetected =
-                !string.IsNullOrWhiteSpace(
-                    tailscaleAddress);
-
-            string address =
-                tailscaleDetected
-                    ? tailscaleAddress
-                    : IPAddress.Loopback.ToString();
+            string address = route.Address;
 
             MultiplayerFriendConnection connection =
                 _friendCodeService.Create(
@@ -81,7 +77,10 @@ namespace Limelight.Services
 
             Log(
                 MultiplayerLogLevel.Log,
-                "Verifying and installing the v0.1.0 host payload.");
+                $"Verifying and installing the v{LimelightMpPayloadService.Version} host payload.");
+
+            Log(MultiplayerLogLevel.Network, route.Description);
+            Log(MultiplayerLogLevel.Warning, route.Notice);
 
             _payloadService.Install(
                 installation,
@@ -127,13 +126,6 @@ namespace Limelight.Services
                 MultiplayerLogLevel.Gameplay,
                 "Ctrl+Shift+F10 teleports Chuckles beside Charlie if a sub-level transition separates them.");
 
-            if (!tailscaleDetected)
-            {
-                Log(
-                    MultiplayerLogLevel.Warning,
-                    "Tailscale was not detected. This code is suitable only for same-PC testing until Tailscale is connected.");
-            }
-
             return new MultiplayerStartResult
             {
                 Role = MultiplayerRole.Host,
@@ -141,7 +133,9 @@ namespace Limelight.Services
                 Address = address,
                 GamePort = GamePort,
                 InputPort = InputPort,
-                TailscaleDetected = tailscaleDetected
+                TailscaleDetected = route.TailscaleDetected,
+                RouteDescription = route.Description,
+                RouteNotice = route.Notice
             };
         }
 
@@ -158,7 +152,7 @@ namespace Limelight.Services
 
             Log(
                 MultiplayerLogLevel.Log,
-                "Verifying and installing the v0.1.0 client payload.");
+                $"Verifying and installing the v{LimelightMpPayloadService.Version} client payload.");
 
             _payloadService.Install(
                 installation,
@@ -203,10 +197,8 @@ namespace Limelight.Services
                 Address = connection.Address,
                 GamePort = connection.GamePort,
                 InputPort = connection.InputPort,
-                TailscaleDetected =
-                    connection.Address.StartsWith(
-                        "100.",
-                        StringComparison.Ordinal)
+                RouteDescription = "Friend-code IPv4 route",
+                RouteNotice = "The code supplies the host address, not a connection guarantee. Both UDP 7777 and 7778 must be reachable."
             };
         }
 
@@ -261,6 +253,23 @@ namespace Limelight.Services
             }
 
             return null;
+        }
+
+        public string[] FindLocalNetworkIpv4Addresses()
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(adapter => adapter.OperationalStatus == OperationalStatus.Up &&
+                    adapter.NetworkInterfaceType is not NetworkInterfaceType.Loopback and
+                        not NetworkInterfaceType.Tunnel &&
+                    !$"{adapter.Name} {adapter.Description}".Contains(
+                        "Tailscale", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses)
+                .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Select(address => address.Address.ToString())
+                .Where(LimelightMpTransportPolicy.IsPrivateLanAddress)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(address => address, StringComparer.Ordinal)
+                .ToArray();
         }
 
         public void Dispose()

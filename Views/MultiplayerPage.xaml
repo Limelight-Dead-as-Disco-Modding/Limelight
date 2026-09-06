@@ -99,7 +99,7 @@
                     BorderThickness="1"
                     CornerRadius="8">
                 <TextBlock x:Name="VersionText"
-                           Text="MP v0.1.0"
+                           Text="MP"
                            FontSize="11"
                            FontWeight="Bold"
                            Foreground="{StaticResource PinkBrush}"/>
@@ -136,8 +136,8 @@
                                        FontSize="12"
                                        FontWeight="Bold"
                                        Foreground="#FFD477"/>
-                            <TextBlock Margin="0,4,0,0"
-                                       Text="Use the same game build and LimelightMP v0.1.0 on both PCs. Level transitions, cameras, dialogue, rhythm sync, local menus and effects are still being hardened."
+                            <TextBlock x:Name="VersionNoticeText"
+                                       Margin="0,4,0,0"
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="{StaticResource MutedTextBrush}"/>
@@ -217,12 +217,34 @@
                                            TextWrapping="Wrap"
                                            Foreground="{StaticResource MutedTextBrush}"/>
                             </StackPanel>
-                            <TextBlock Grid.Row="1"
-                                       Margin="0,12,0,12"
-                                       Text="Tailscale is used for the private route. Share only the host PC with your friend when possible."
-                                       FontSize="11"
-                                       TextWrapping="Wrap"
-                                       Foreground="#8C93A8"/>
+                            <StackPanel Grid.Row="1"
+                                        Margin="0,12,0,12">
+                                <TextBlock Text="HOST CONNECTION ROUTE"
+                                           Margin="0,0,0,6"
+                                           FontSize="11"
+                                           Foreground="{StaticResource MutedTextBrush}"/>
+                                <ComboBox x:Name="HostRouteComboBox"
+                                          SelectedIndex="0"
+                                          SelectionChanged="HostRoute_SelectionChanged">
+                                    <ComboBoxItem Content="Automatic (Tailscale or same-PC test)"/>
+                                    <ComboBoxItem Content="Local network (no VPN required)"/>
+                                    <ComboBoxItem Content="Direct IPv4 (existing routed connection)"/>
+                                </ComboBox>
+                                <ComboBox x:Name="LocalAddressComboBox"
+                                          Margin="0,8,0,0"
+                                          Visibility="Collapsed"
+                                          ToolTip="Choose this PC's address on the network shared with your friend"/>
+                                <TextBox x:Name="DirectAddressTextBox"
+                                         Margin="0,8,0,0"
+                                         Visibility="Collapsed"
+                                         Style="{StaticResource MultiplayerTextBoxStyle}"
+                                         ToolTip="Host IPv4 reachable by your friend; no port or hostname"/>
+                                <TextBlock x:Name="HostRouteNoticeText"
+                                           Margin="0,8,0,0"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Foreground="#8C93A8"/>
+                            </StackPanel>
                             <Button x:Name="HostButton"
                                     Grid.Row="2"
                                     Content="HOST AND LAUNCH"

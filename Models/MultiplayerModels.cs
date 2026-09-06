@@ -18,6 +18,31 @@ namespace Limelight.Models
         Error
     }
 
+    public enum MultiplayerHostRoute
+    {
+        Automatic,
+        LocalNetwork,
+        DirectAddress
+    }
+
+    public sealed class MultiplayerHostOptions
+    {
+        public MultiplayerHostRoute Route { get; init; }
+
+        public string Address { get; init; } = string.Empty;
+    }
+
+    public sealed class MultiplayerResolvedRoute
+    {
+        public string Address { get; init; } = string.Empty;
+
+        public string Description { get; init; } = string.Empty;
+
+        public string Notice { get; init; } = string.Empty;
+
+        public bool TailscaleDetected { get; init; }
+    }
+
     public sealed class MultiplayerFriendConnection
     {
         public string Address { get; init; } =
@@ -66,6 +91,10 @@ namespace Limelight.Models
         public int InputPort { get; init; }
 
         public bool TailscaleDetected { get; init; }
+
+        public string RouteDescription { get; init; } = string.Empty;
+
+        public string RouteNotice { get; init; } = string.Empty;
     }
 
     public sealed class MultiplayerPayloadManifest
