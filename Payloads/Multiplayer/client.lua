@@ -1,9 +1,20 @@
 local UEHelpers = require("UEHelpers")
 
 local MOD_NAME = "LimelightMPLocalRenderClient"
-local MOD_VERSION = "0.1.4"
-local VERSION_WATERMARK = "LimelightMP_0.1.4 By Henreh <3"
+local MOD_VERSION = "0.1.5"
+local VERSION_WATERMARK = "LimelightMP_0.1.5 By Henreh <3"
 local CONNECT_ADDRESS = "127.0.0.1:7777" -- INSTALL_CONNECT_ADDRESS
+local NETWORK_PLAYER_MODE = "compatibility" -- INSTALL_NETWORK_PLAYER_MODE
+local STEAM_SESSION = false -- INSTALL_STEAM_SESSION
+local transportReady = require("steam_gate").create(STEAM_SESSION)
+
+if NETWORK_PLAYER_MODE == "native" then
+    require("native_ownership").start({
+        role = "client", version = MOD_VERSION, watermark = VERSION_WATERMARK,
+        connectAddress = CONNECT_ADDRESS, transportReady = transportReady,
+    })
+    return
+end
 -- I keep the curtain on while Unreal changes outfits, but one switch puts the
 -- old honest mess back if a future game build teaches it a new dance.
 local ENABLE_CLIENT_TRAVEL_CURTAIN = true
@@ -1786,7 +1797,7 @@ local function snapshot(reason)
 end
 
 local function tryJoin(reason)
-    if joinIssued or worldTransitioning then
+    if joinIssued or worldTransitioning or not transportReady() then
         return
     end
     if not string.match(CONNECT_ADDRESS, "^[%w%.%-%[%]:]+$") then

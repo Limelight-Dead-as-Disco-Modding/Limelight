@@ -22,7 +22,8 @@ namespace Limelight.Models
     {
         Automatic,
         LocalNetwork,
-        DirectAddress
+        DirectAddress,
+        Steam
     }
 
     public sealed class MultiplayerHostOptions
@@ -30,6 +31,15 @@ namespace Limelight.Models
         public MultiplayerHostRoute Route { get; init; }
 
         public string Address { get; init; } = string.Empty;
+
+        public bool NativePlayerMode { get; init; }
+    }
+
+    public sealed class MultiplayerJoinOptions
+    {
+        public string FriendCode { get; init; } = string.Empty;
+
+        public bool NativePlayerMode { get; init; }
     }
 
     public sealed class MultiplayerResolvedRoute
@@ -74,6 +84,8 @@ namespace Limelight.Models
 
         public string Version { get; init; } =
             string.Empty;
+
+        public bool NativePlayerMode { get; init; }
     }
 
     public sealed class MultiplayerStartResult
@@ -95,6 +107,12 @@ namespace Limelight.Models
         public string RouteDescription { get; init; } = string.Empty;
 
         public string RouteNotice { get; init; } = string.Empty;
+
+        public bool UsesSteam { get; init; }
+
+        public string SteamRequestId { get; init; } = string.Empty;
+
+        public bool NativePlayerMode { get; init; }
     }
 
     public sealed class MultiplayerPayloadManifest
@@ -105,6 +123,10 @@ namespace Limelight.Models
             string.Empty;
 
         public int ProtocolVersion { get; init; }
+
+        public bool SteamTransportSupported { get; init; }
+
+        public bool NativePlayerModeSupported { get; init; }
 
         public string SourceCommit { get; init; } =
             string.Empty;
@@ -122,6 +144,10 @@ namespace Limelight.Models
 
         public MultiplayerPayloadFile ClientScript { get; init; } =
             new();
+
+        public MultiplayerPayloadFile SteamGateScript { get; init; } = new();
+
+        public MultiplayerPayloadFile NativeOwnershipScript { get; init; } = new();
 
         public MultiplayerPayloadFile NativeBridge { get; init; } =
             new();

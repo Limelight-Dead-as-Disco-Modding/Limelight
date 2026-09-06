@@ -54,6 +54,8 @@
   <ItemGroup>
     <None Remove="Payloads\Multiplayer\host.lua" />
     <None Remove="Payloads\Multiplayer\client.lua" />
+    <None Remove="Payloads\Multiplayer\native_ownership.lua" />
+    <None Remove="Payloads\Multiplayer\steam_gate.lua" />
     <None Remove="Payloads\Multiplayer\LimelightMPNative.dll" />
     <None Remove="Payloads\Multiplayer\LimelightMPRelay.exe" />
     <None Remove="Payloads\Multiplayer\LimelightMPUI.pak" />
@@ -63,6 +65,8 @@
 
     <EmbeddedResource Include="Payloads\Multiplayer\host.lua" LogicalName="Limelight.Payloads.Multiplayer.host.lua" />
     <EmbeddedResource Include="Payloads\Multiplayer\client.lua" LogicalName="Limelight.Payloads.Multiplayer.client.lua" />
+    <EmbeddedResource Include="Payloads\Multiplayer\native_ownership.lua" LogicalName="Limelight.Payloads.Multiplayer.native_ownership.lua" />
+    <EmbeddedResource Include="Payloads\Multiplayer\steam_gate.lua" LogicalName="Limelight.Payloads.Multiplayer.steam_gate.lua" />
     <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPNative.dll" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPNative.dll" />
     <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPRelay.exe" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPRelay.exe" />
     <EmbeddedResource Include="Payloads\Multiplayer\LimelightMPUI.pak" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPUI.pak" />

@@ -243,6 +243,7 @@ namespace Limelight
 
             _multiplayerSessionService.LogEmitted +=
                 MultiplayerLogEmitted;
+            _multiplayerSessionService.SteamStatusChanged += MultiplayerSteamStatusChanged;
 
             _compatibilityService =
                 new CompatibilityService(
@@ -1876,6 +1877,17 @@ namespace Limelight
             RefreshDiscordPresence();
         }
 
+        private void MultiplayerSteamStatusChanged(MultiplayerSteamStatus status)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => MultiplayerSteamStatusChanged(status)));
+                return;
+            }
+            MultiplayerPageControl.ShowSteamStatus(status);
+            RefreshDiscordPresence();
+        }
+
         private void RefreshMultiplayerPage()
         {
             bool gameConnected =
@@ -1932,7 +1944,9 @@ namespace Limelight
                 _multiplayerSessionService.FindTailscaleIpv4Address(),
                 _multiplayerPayloadService.ReadInstalledRole(
                     installation),
-                _multiplayerSessionService.FindLocalNetworkIpv4Addresses());
+                _multiplayerSessionService.FindLocalNetworkIpv4Addresses(),
+                payloadValid && _multiplayerPayloadService.Manifest.SteamTransportSupported,
+                payloadValid && _multiplayerPayloadService.Manifest.NativePlayerModeSupported);
         }
 
         private async void HostMultiplayerRequested(MultiplayerHostOptions options)
@@ -1944,11 +1958,12 @@ namespace Limelight
         }
 
         private async void JoinMultiplayerRequested(
-            string friendCode)
+            MultiplayerJoinOptions options)
         {
             await StartMultiplayerSessionAsync(
                 MultiplayerRole.Client,
-                friendCode);
+                options.FriendCode,
+                new MultiplayerHostOptions { NativePlayerMode = options.NativePlayerMode });
         }
 
         private async Task StartMultiplayerSessionAsync(
@@ -2050,7 +2065,8 @@ namespace Limelight
                                 hostOptions)
                             : _multiplayerSessionService.StartClient(
                                 installation,
-                                friendCode ?? string.Empty));
+                                friendCode ?? string.Empty,
+                                hostOptions?.NativePlayerMode == true));
 
                 using Process? steamLaunch =
                     Process.Start(
@@ -2070,10 +2086,10 @@ namespace Limelight
                     "Steam accepted the Dead as Disco launch request.");
 
                 ShowNotification(
-                    role == MultiplayerRole.Host
+                    session.UsesSteam ? "STEAM CONNECTION STARTING" : role == MultiplayerRole.Host
                         ? "MULTIPLAYER HOST READY"
                         : "JOIN SESSION READY",
-                    role == MultiplayerRole.Host
+                    session.UsesSteam ? "Waiting for the running game to report Steam transport status. Gameplay is not yet verified." : role == MultiplayerRole.Host
                         ? "Copy the short code for your friend, then host from the Dive Bar."
                         : "Your game is launching and will connect to the host.",
                     isError: false);
@@ -2096,7 +2112,7 @@ namespace Limelight
 
                 ShowLimelightDialog(
                     "MULTIPLAYER COULD NOT START",
-                    "Limelight left the game closed and stopped the controller relay.",
+                    "Limelight stopped multiplayer setup and the controller relay.",
                     LimelightDialogTone.Error,
                     details: exception.Message,
                     eyebrow: "LIMELIGHT MP");

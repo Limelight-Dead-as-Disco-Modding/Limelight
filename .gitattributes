@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+# I keep bundled Lua bytes identical to their integrity manifest on every checkout.
+Payloads/Multiplayer/*.lua -text
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

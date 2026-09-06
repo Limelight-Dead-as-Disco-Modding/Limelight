@@ -15,6 +15,8 @@ namespace Limelight.Services
         private readonly LimelightMpPayloadService _payloadService;
         private readonly LimelightMpRelayService _relayService;
         private readonly LimelightMpFriendCodeService _friendCodeService;
+        private readonly LimelightMpSteamSessionService _steamService = new();
+        private string _lastSteamState = string.Empty;
         private readonly object _logGate =
             new();
 
@@ -38,9 +40,13 @@ namespace Limelight.Services
 
             _relayService.Exited +=
                 RelayExited;
+
+            _steamService.StatusChanged += SteamStatusReceived;
         }
 
         public event Action<MultiplayerLogLevel, string>? LogEmitted;
+
+        public event Action<MultiplayerSteamStatus>? SteamStatusChanged;
 
         public MultiplayerRole ActiveRole { get; private set; }
 
@@ -55,9 +61,16 @@ namespace Limelight.Services
             Ue4ssDetectionResult installation,
             MultiplayerHostOptions? options = null)
         {
+            options ??= new MultiplayerHostOptions();
+            if (options.Route == MultiplayerHostRoute.Steam)
+            {
+                string token = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+                return StartSteam(installation, MultiplayerRole.Host, token, "0", options.NativePlayerMode);
+            }
+
             MultiplayerResolvedRoute route =
                 LimelightMpTransportPolicy.ResolveHost(
-                    options ?? new MultiplayerHostOptions(),
+                    options,
                     FindTailscaleIpv4Address(),
                     FindLocalNetworkIpv4Addresses());
 
@@ -86,7 +99,10 @@ namespace Limelight.Services
                 installation,
                 MultiplayerRole.Host,
                 $"{address}:{GamePort}",
-                GamePort);
+                GamePort,
+                options.NativePlayerMode);
+
+            LogOwnershipMode(options.NativePlayerMode, isSteam: false);
 
             StartGameLogMonitor(
                 installation);
@@ -122,9 +138,12 @@ namespace Limelight.Services
                 MultiplayerLogLevel.Gameplay,
                 "Ctrl+Shift+F7 travels both games to Infinite Disco; F8 returns both to the Dive Bar.");
 
-            Log(
-                MultiplayerLogLevel.Gameplay,
-                "Ctrl+Shift+F10 teleports Chuckles beside Charlie if a sub-level transition separates them.");
+            if (!options.NativePlayerMode)
+            {
+                Log(
+                    MultiplayerLogLevel.Gameplay,
+                    "Ctrl+Shift+F10 teleports Chuckles beside Charlie if a sub-level transition separates them.");
+            }
 
             return new MultiplayerStartResult
             {
@@ -135,20 +154,27 @@ namespace Limelight.Services
                 InputPort = InputPort,
                 TailscaleDetected = route.TailscaleDetected,
                 RouteDescription = route.Description,
-                RouteNotice = route.Notice
+                RouteNotice = route.Notice,
+                NativePlayerMode = options.NativePlayerMode
             };
         }
 
         public MultiplayerStartResult StartClient(
             Ue4ssDetectionResult installation,
-            string friendCode)
+            string friendCode,
+            bool nativePlayerMode = false)
         {
-            EnsureNoActiveSession();
-            BeginLog(MultiplayerRole.Client);
+            if ((friendCode?.Trim() ?? string.Empty).StartsWith("LS1-", StringComparison.Ordinal))
+            {
+                MultiplayerSteamInvitation invitation = LimelightMpSteamContract.Decode(friendCode!);
+                return StartSteam(installation, MultiplayerRole.Client, invitation.Token, invitation.LobbyId, nativePlayerMode);
+            }
 
             MultiplayerFriendConnection connection =
-                _friendCodeService.Decode(
-                    friendCode);
+                _friendCodeService.Decode(friendCode!);
+
+            EnsureNoActiveSession();
+            BeginLog(MultiplayerRole.Client);
 
             Log(
                 MultiplayerLogLevel.Log,
@@ -158,7 +184,10 @@ namespace Limelight.Services
                 installation,
                 MultiplayerRole.Client,
                 $"{connection.Address}:{connection.GamePort}",
-                connection.GamePort);
+                connection.GamePort,
+                nativePlayerMode);
+
+            LogOwnershipMode(nativePlayerMode, isSteam: false);
 
             StartGameLogMonitor(
                 installation);
@@ -198,8 +227,93 @@ namespace Limelight.Services
                 GamePort = connection.GamePort,
                 InputPort = connection.InputPort,
                 RouteDescription = "Friend-code IPv4 route",
-                RouteNotice = "The code supplies the host address, not a connection guarantee. Both UDP 7777 and 7778 must be reachable."
+                RouteNotice = "The code supplies the host address, not a connection guarantee. Both UDP 7777 and 7778 must be reachable.",
+                NativePlayerMode = nativePlayerMode
             };
+        }
+
+        private MultiplayerStartResult StartSteam(Ue4ssDetectionResult installation,
+            MultiplayerRole role, string token, string lobbyId, bool nativePlayerMode)
+        {
+            if (!_payloadService.Manifest.SteamTransportSupported)
+            {
+                throw new InvalidOperationException("This bundled native payload does not support Steam transport. Choose a local/direct route or install a compatible Limelight build.");
+            }
+
+            EnsureNoActiveSession();
+            BeginLog(role);
+            int gamePort = role == MultiplayerRole.Client ? LimelightMpSteamContract.TunnelGamePort : GamePort;
+            int inputPort = role == MultiplayerRole.Client ? LimelightMpSteamContract.TunnelInputPort : InputPort;
+            try
+            {
+                _payloadService.Install(installation, role, $"127.0.0.1:{gamePort}", gamePort, nativePlayerMode, useSteam: true);
+                _steamService.Prepare(
+                    Path.Combine(installation.ModsDirectory, "LimelightMPNative"),
+                    Path.Combine(installation.Win64Directory, "PagodaSteam-Win64-Shipping.exe"),
+                    role, token, lobbyId, LimelightMpPayloadService.Version, LimelightMpPayloadService.ProtocolVersion, nativePlayerMode);
+
+                StartGameLogMonitor(installation);
+                string relayPath = _payloadService.EnsureRelayExtracted();
+                if (role == MultiplayerRole.Host)
+                    _relayService.StartHost(relayPath, InputPort, token);
+                else
+                    _relayService.StartClient(relayPath, "127.0.0.1", inputPort, token);
+                ActiveRole = role;
+                _lastSteamState = string.Empty;
+            }
+            catch
+            {
+                _steamService.Stop();
+                _relayService.Stop();
+                ActiveRole = MultiplayerRole.None;
+                StopGameLogMonitor();
+                throw;
+            }
+
+            Log(MultiplayerLogLevel.Network, "Steam transport requested. Waiting for the game's Steam context; no VPN or public port forwarding is requested.");
+            LogOwnershipMode(nativePlayerMode, isSteam: true);
+            return new MultiplayerStartResult
+            {
+                Role = role,
+                Address = "127.0.0.1",
+                GamePort = gamePort,
+                InputPort = inputPort,
+                UsesSteam = true,
+                SteamRequestId = _steamService.RequestId,
+                NativePlayerMode = nativePlayerMode,
+                RouteDescription = "Steam transport (experimental)",
+                RouteNotice = role == MultiplayerRole.Host
+                    ? "Your LS1 invitation appears only after the running game creates its Steam lobby. Then enter the Dive Bar and press Ctrl+Shift+F5. Lobby or transport readiness does not certify gameplay."
+                    : "The game will check the host's build and player mode before opening the loopback tunnel. Transport readiness does not certify gameplay."
+            };
+        }
+
+        private void LogOwnershipMode(bool nativePlayerMode, bool isSteam)
+        {
+            Log(MultiplayerLogLevel.Warning, nativePlayerMode
+                ? "Experimental remote-player ownership selected. Both PCs must select this mode; combat, camera and travel are not yet certified."
+                : "Compatibility player ownership selected.");
+            if (!isSteam)
+                Log(MultiplayerLogLevel.Warning, "L1 codes do not encode player mode. Confirm the same player-mode checkbox on both PCs before joining.");
+        }
+
+        private void SteamStatusReceived(MultiplayerSteamStatus status)
+        {
+            if (ActiveRole == MultiplayerRole.None || status.RequestId != _steamService.RequestId) return;
+            if (status.State != _lastSteamState)
+            {
+                _lastSteamState = status.State;
+                Log(status.State == "failed" ? MultiplayerLogLevel.Error : MultiplayerLogLevel.Network,
+                    LimelightMpSteamContract.DescribeState(status.State));
+            }
+            SteamStatusChanged?.Invoke(status);
+            if (status.State is "failed" or "stopped")
+            {
+                ActiveRole = MultiplayerRole.None;
+                _steamService.Stop();
+                _relayService.Stop();
+                StopGameLogMonitor();
+            }
         }
 
         public void Stop(
@@ -209,6 +323,7 @@ namespace Limelight.Services
                 ActiveRole;
 
             ActiveRole = MultiplayerRole.None;
+            _steamService.Stop();
             _relayService.Stop();
             StopGameLogMonitor();
 
@@ -280,8 +395,11 @@ namespace Limelight.Services
             _relayService.Exited -=
                 RelayExited;
 
+            _steamService.StatusChanged -= SteamStatusReceived;
+
             Stop("Limelight closed the multiplayer relay.");
             _relayService.Dispose();
+            _steamService.Dispose();
         }
 
         private void EnsureNoActiveSession()
@@ -293,6 +411,7 @@ namespace Limelight.Services
             }
 
             _relayService.Stop();
+            _steamService.Stop();
             ActiveRole = MultiplayerRole.None;
         }
 
@@ -644,6 +763,7 @@ namespace Limelight.Services
             }
 
             ActiveRole = MultiplayerRole.None;
+            _steamService.Stop();
             StopGameLogMonitor();
 
             Log(

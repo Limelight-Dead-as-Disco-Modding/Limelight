@@ -11,10 +11,13 @@ namespace Limelight.Views
     {
         private bool _hasActiveSession;
         private bool _isReady;
+        private bool _nativePlayerModeSupported;
+        private string _steamRequestId = string.Empty;
+        private bool _isSteamHost;
 
         public event Action<MultiplayerHostOptions>? HostRequested;
 
-        public event Action<string>? JoinRequested;
+        public event Action<MultiplayerJoinOptions>? JoinRequested;
 
         public event Action? StopRequested;
 
@@ -48,7 +51,9 @@ namespace Limelight.Views
             bool embeddedPayloadValid,
             string? tailscaleAddress,
             MultiplayerInstalledRole? installedRole,
-            IReadOnlyCollection<string> localAddresses)
+            IReadOnlyCollection<string> localAddresses,
+            bool steamTransportSupported,
+            bool nativePlayerModeSupported)
         {
             bool ready =
                 gameConnected &&
@@ -57,6 +62,13 @@ namespace Limelight.Views
                 embeddedPayloadValid;
 
             _isReady = ready;
+            _nativePlayerModeSupported = nativePlayerModeSupported;
+            SteamRouteItem.Visibility = steamTransportSupported ? Visibility.Visible : Visibility.Collapsed;
+            if (!steamTransportSupported && HostRouteComboBox.SelectedIndex == 3)
+                HostRouteComboBox.SelectedIndex = 0;
+            if (!nativePlayerModeSupported && !_hasActiveSession)
+                NativePlayerModeCheckBox.IsChecked = false;
+            UpdateHostRouteControls();
             string? previousAddress = LocalAddressComboBox.SelectedItem as string;
             LocalAddressComboBox.ItemsSource = localAddresses;
             LocalAddressComboBox.SelectedItem =
@@ -121,17 +133,19 @@ namespace Limelight.Views
                 Visibility.Visible;
 
             _hasActiveSession = true;
+            _steamRequestId = session.SteamRequestId;
+            _isSteamHost = session.UsesSteam && session.Role == MultiplayerRole.Host;
 
             bool isHost =
                 session.Role == MultiplayerRole.Host;
 
             SessionEyebrowText.Text =
-                isHost
+                session.UsesSteam ? "STEAM TRANSPORT STARTING" : isHost
                     ? "HOST SESSION READY"
                     : "CLIENT SESSION READY";
 
             SessionTitleText.Text =
-                isHost
+                session.UsesSteam ? "WAITING FOR THE GAME'S STEAM CONNECTION" : isHost
                     ? "SHARE THE CODE, THEN ENTER THE DIVE BAR"
                     : "REACHING THE HOST";
 
@@ -141,12 +155,15 @@ namespace Limelight.Views
                     : $"Your local game will connect to {session.Address}:{session.GamePort}. Leave Limelight open while playing.";
 
             SessionDetailText.Text += $"\n{session.RouteDescription}. {session.RouteNotice}";
+            SessionDetailText.Text += session.NativePlayerMode
+                ? "\nExperimental remote-player ownership; gameplay unverified."
+                : "\nCompatibility player ownership.";
 
             FriendCodeText.Text =
                 session.FriendCode;
 
             FriendCodePanel.Visibility =
-                isHost
+                isHost && !string.IsNullOrEmpty(session.FriendCode)
                     ? Visibility.Visible
                     : Visibility.Collapsed;
 
@@ -155,12 +172,35 @@ namespace Limelight.Views
             UpdateHostRouteControls();
         }
 
+        public void ShowSteamStatus(MultiplayerSteamStatus status)
+        {
+            if (!_hasActiveSession || string.IsNullOrEmpty(_steamRequestId) || status.RequestId != _steamRequestId)
+                return;
+
+            bool failed = status.State is "failed" or "stopped";
+            SessionEyebrowText.Text = failed ? "STEAM TRANSPORT STOPPED" :
+                status.TransportReady ? "STEAM TRANSPORT READY · GAMEPLAY UNVERIFIED" : "STEAM CONNECTION IN PROGRESS";
+            SessionTitleText.Text = failed ? "STOP, THEN RETRY OR CHOOSE A DIRECT ROUTE" :
+                status.TransportReady ? "PEER CONNECTED — TEST GAMEPLAY NEXT" :
+                _isSteamHost && !string.IsNullOrEmpty(status.FriendCode) ? "STEAM INVITATION READY TO SHARE" : "WAITING FOR STEAM";
+            SessionDetailText.Text = LimelightMpSteamContract.DescribeState(status.State) +
+                $"\nWorld packets: sent {status.WorldSent}, received {status.WorldReceived}. Input packets: sent {status.InputSent}, received {status.InputReceived}.";
+            if (failed)
+                SessionDetailText.Text += "\n" + LimelightMpSteamContract.RedactStatusMessage(
+                    string.IsNullOrEmpty(status.Error) ? status.Message : status.Error);
+            if (_isSteamHost && !failed)
+                SessionDetailText.Text += "\nEnter the Dive Bar, then press Ctrl+Shift+F5 once to host the game.";
+            FriendCodeText.Text = _isSteamHost && !failed ? status.FriendCode : string.Empty;
+            FriendCodePanel.Visibility = string.IsNullOrEmpty(FriendCodeText.Text) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         public void ShowIdle()
         {
             ActiveSessionCard.Visibility =
                 Visibility.Collapsed;
 
             _hasActiveSession = false;
+            _steamRequestId = string.Empty;
 
             FriendCodeText.Text =
                 string.Empty;
@@ -259,7 +299,8 @@ namespace Limelight.Views
                 Route = (MultiplayerHostRoute)HostRouteComboBox.SelectedIndex,
                 Address = HostRouteComboBox.SelectedIndex == 1
                     ? LocalAddressComboBox.SelectedItem as string ?? string.Empty
-                    : DirectAddressTextBox.Text
+                    : DirectAddressTextBox.Text,
+                NativePlayerMode = NativePlayerModeCheckBox.IsChecked == true
             });
         }
 
@@ -271,13 +312,14 @@ namespace Limelight.Views
         private void UpdateHostRouteControls()
         {
             if (LocalAddressComboBox is null || DirectAddressTextBox is null ||
-                HostRouteNoticeText is null || BusyText is null)
+                HostRouteNoticeText is null || NativePlayerModeCheckBox is null || BusyText is null)
             {
                 return;
             }
 
             bool enabled = !IsBusy() && !_hasActiveSession;
             HostRouteComboBox.IsEnabled = enabled;
+            NativePlayerModeCheckBox.IsEnabled = enabled && _nativePlayerModeSupported;
             LocalAddressComboBox.IsEnabled = enabled;
             DirectAddressTextBox.IsEnabled = enabled;
             LocalAddressComboBox.Visibility = HostRouteComboBox.SelectedIndex == 1
@@ -288,6 +330,7 @@ namespace Limelight.Views
             {
                 1 => "Choose the address on the LAN shared with your friend. No VPN is required on a reachable LAN. The game and relay need UDP 7777 and 7778 allowed through Windows Firewall.",
                 2 => "Enter an IPv4 address your friend can reach. Internet play needs existing routing/port forwarding for BOTH UDP 7777 (game) and 7778 (input). Limelight does not change firewall or router settings.",
+                3 => "The game will create a private Steam lobby and carry world/input packets over Steam. No VPN is requested. Both players need matching builds and player modes; two-account gameplay is not yet certified.",
                 _ => "Uses Tailscale when connected; otherwise the code works only on this PC. For two PCs on the same LAN, choose Local network."
             };
         }
@@ -296,8 +339,11 @@ namespace Limelight.Views
             object sender,
             RoutedEventArgs e)
         {
-            JoinRequested?.Invoke(
-                FriendCodeTextBox.Text);
+            JoinRequested?.Invoke(new MultiplayerJoinOptions
+            {
+                FriendCode = FriendCodeTextBox.Text,
+                NativePlayerMode = NativePlayerModeCheckBox.IsChecked == true
+            });
         }
 
         private void Stop_Click(

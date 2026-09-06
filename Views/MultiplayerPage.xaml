@@ -187,6 +187,20 @@
                     </Grid>
                 </Border>
 
+                <Border Margin="0,14,0,0" Padding="16"
+                        Background="{StaticResource RaisedPanelBrush}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="9">
+                    <StackPanel>
+                        <CheckBox x:Name="NativePlayerModeCheckBox"
+                                  IsChecked="False" IsEnabled="False"
+                                  Content="EXPERIMENTAL REMOTE-PLAYER OWNERSHIP"
+                                  Foreground="{StaticResource TextBrush}"/>
+                        <TextBlock Margin="0,6,0,0" FontSize="11" TextWrapping="Wrap"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   Text="Off keeps compatibility mode. Both players must choose the same setting. Steam checks this choice; L1 codes cannot. Experimental ownership, combat, camera and travel still need gameplay testing."/>
+                    </StackPanel>
+                </Border>
+
                 <UniformGrid Margin="0,14,0,0"
                              Columns="2">
                     <Border Margin="0,0,7,0"
@@ -229,6 +243,7 @@
                                     <ComboBoxItem Content="Automatic (Tailscale or same-PC test)"/>
                                     <ComboBoxItem Content="Local network (no VPN required)"/>
                                     <ComboBoxItem Content="Direct IPv4 (existing routed connection)"/>
+                                    <ComboBoxItem x:Name="SteamRouteItem" Content="Steam (experimental, no VPN)" Visibility="Collapsed"/>
                                 </ComboBox>
                                 <ComboBox x:Name="LocalAddressComboBox"
                                           Margin="0,8,0,0"
@@ -286,7 +301,7 @@
                                      Margin="0,12,0,12"
                                      VerticalAlignment="Center"
                                      Style="{StaticResource MultiplayerTextBoxStyle}"
-                                     ToolTip="Paste the host's complete L1- code"/>
+                                     ToolTip="Paste the host's complete L1- direct code or LS1- Steam invitation"/>
                             <Button x:Name="JoinButton"
                                     Grid.Row="2"
                                     Content="JOIN AND LAUNCH"

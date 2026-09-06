@@ -1,25 +1,38 @@
 {
   "schemaVersion": 1,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "protocolVersion": 1,
-  "sourceCommit": "1dfff01f2a548e06553278962dd5b70f653d969d",
-  "sourceDirty": true,
+  "steamTransportSupported": true,
+  "nativePlayerModeSupported": true,
+  "nativeSourceFingerprint": "0FD643658E192F272BF4F1310EE0083BB0CD0D8928639D3D097614BA7888C93A",
+  "sourceCommit": "1383425cea945de81fce22ba64a368a80d9ada65",
+  "sourceDirty": false,
   "ue4ssVersion": "3.0.1-1009",
   "ue4ssCommit": "c2ac246447a8bcd92541070cb474044e7a2bbbe6",
   "hostScript": {
     "resourceName": "Limelight.Payloads.Multiplayer.host.lua",
-    "size": 71440,
-    "sha256": "5F7BFDA8FF8EAA98E7875CD869589234185E133D9496444EB3F3C83D0F5C8973"
+    "size": 69808,
+    "sha256": "FC240A73A12C5A5BB79B1B97E6134B4CFC88DFBDE80DBA11F8E6F028806207FE"
   },
   "clientScript": {
     "resourceName": "Limelight.Payloads.Multiplayer.client.lua",
-    "size": 70140,
-    "sha256": "FEA08922BF015DA5355EC44358907D2852A2527479771DCAB393BFF1A93172D2"
+    "size": 69026,
+    "sha256": "70DE3946DBFC0E9439E7BF1B00888C84BCF0BFB2990B23130FB5B509A507C295"
+  },
+  "nativeOwnershipScript": {
+    "resourceName": "Limelight.Payloads.Multiplayer.native_ownership.lua",
+    "size": 20595,
+    "sha256": "C1A97FEC057BDA77C573821325B9BBDDF2D2075020FEEE3461E3EF5F1F1626F2"
+  },
+  "steamGateScript": {
+    "resourceName": "Limelight.Payloads.Multiplayer.steam_gate.lua",
+    "size": 2421,
+    "sha256": "0CF6C196141D3ECD99D398A2670DF43016474B1565F4410AA151BBBC45776F66"
   },
   "nativeBridge": {
     "resourceName": "Limelight.Payloads.Multiplayer.LimelightMPNative.dll",
-    "size": 937472,
-    "sha256": "FF7D9ADBE1071EBC4B62768CB07BA21F003530A15A0010A472B1F8C4C1103538"
+    "size": 1009664,
+    "sha256": "3A102029DD18CD58D11FB1AE45F444D673F0506E6E1968FF3A98C7EEC9E61F0F"
   },
   "relay": {
     "resourceName": "Limelight.Payloads.Multiplayer.LimelightMPRelay.exe",

@@ -12,8 +12,10 @@ namespace Limelight.Services
     public sealed partial class LimelightMpPayloadService
     {
         public const string ProductName = "LimelightMP";
-        public const string Version = "0.1.4";
+        public const string Version = "0.1.5";
         public const int ProtocolVersion = 1;
+        private const string NativePlayerGameSha256 =
+            "AF881B1D9C6D248AF09D096D009B417F812BDEE479FF2A7E31D28F14A8E51174";
 
         private const string ManifestResourceName =
             "Limelight.Payloads.Multiplayer.multiplayer-manifest.json";
@@ -69,6 +71,9 @@ namespace Limelight.Services
                 manifest.ClientScript,
                 "client script");
 
+            ValidateEmbeddedFile(manifest.NativeOwnershipScript, "native ownership script");
+            ValidateEmbeddedFile(manifest.SteamGateScript, "Steam readiness script");
+
             ValidateEmbeddedFile(
                 manifest.NativeBridge,
                 "native controller bridge");
@@ -94,7 +99,9 @@ namespace Limelight.Services
             Ue4ssDetectionResult installation,
             MultiplayerRole role,
             string connectAddress,
-            int gamePort)
+            int gamePort,
+            bool nativePlayerMode = false,
+            bool useSteam = false)
         {
             if (role is not MultiplayerRole.Host and
                 not MultiplayerRole.Client)
@@ -105,6 +112,20 @@ namespace Limelight.Services
 
             ValidateInstallation(installation);
             ValidateEmbeddedPayloads();
+
+            MultiplayerPayloadManifest manifest = LoadAndValidateManifest();
+            if ((useSteam && !manifest.SteamTransportSupported) ||
+                (nativePlayerMode && !manifest.NativePlayerModeSupported))
+                throw new InvalidOperationException("This payload does not contain the requested multiplayer capability.");
+            if (nativePlayerMode)
+            {
+                // I keep the experimental admission path tied to the game build I inspected.
+                string executable = Path.Combine(installation.Win64Directory, "PagodaSteam-Win64-Shipping.exe");
+                using FileStream game = File.OpenRead(executable);
+                if (!string.Equals(Convert.ToHexString(SHA256.HashData(game)), NativePlayerGameSha256,
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Native player ownership is experimental and has not been mapped for this game build. Use compatibility mode.");
+            }
 
             if (string.IsNullOrWhiteSpace(connectAddress) ||
                 connectAddress.Length > 255 ||
@@ -195,7 +216,8 @@ namespace Limelight.Services
                     Address = connectAddress,
                     Port = gamePort,
                     InstalledUtc = DateTimeOffset.UtcNow,
-                    Version = Version
+                    Version = Version,
+                    NativePlayerMode = nativePlayerMode
                 };
 
             bool transactionCompleted =
@@ -203,6 +225,10 @@ namespace Limelight.Services
 
             bool uiSwapStarted =
                 false;
+            bool roleSwapStarted = false;
+            bool nativeSwapStarted = false;
+            List<string> uiBackedUpFiles = new();
+            List<string> uiPublishedFiles = new();
 
             try
             {
@@ -211,11 +237,14 @@ namespace Limelight.Services
                     role,
                     connectAddress,
                     gamePort,
-                    marker);
+                    marker,
+                    nativePlayerMode,
+                    useSteam);
 
                 CreateStagedNativeBridge(
                     stagedNativeDirectory,
-                    role);
+                    role,
+                    nativePlayerMode);
 
                 CreateStagedUi(
                     stagedUiDirectory);
@@ -223,7 +252,8 @@ namespace Limelight.Services
                 uiSwapStarted = true;
                 MoveManagedUiToDirectory(
                     logicModsDirectory,
-                    backupUiDirectory);
+                    backupUiDirectory,
+                    uiBackedUpFiles);
 
                 if (Directory.Exists(modDirectory))
                 {
@@ -232,6 +262,7 @@ namespace Limelight.Services
                         backupModDirectory);
                 }
 
+                roleSwapStarted = true;
                 Directory.Move(
                     stagedModDirectory,
                     modDirectory);
@@ -243,13 +274,15 @@ namespace Limelight.Services
                         backupNativeDirectory);
                 }
 
+                nativeSwapStarted = true;
                 Directory.Move(
                     stagedNativeDirectory,
                     nativeDirectory);
 
                 MoveStagedUiToTarget(
                     stagedUiDirectory,
-                    logicModsDirectory);
+                    logicModsDirectory,
+                    uiPublishedFiles);
 
                 UpdateModsFile(
                     installation.ModsDirectory);
@@ -260,21 +293,20 @@ namespace Limelight.Services
             }
             catch
             {
-                RestoreManagedDirectory(
-                    modDirectory,
-                    backupModDirectory,
-                    RoleMarkerName);
+                // I only undo swaps that began; staging failures still have the old installation in place.
+                if (roleSwapStarted)
+                    RestoreManagedDirectory(modDirectory, backupModDirectory, RoleMarkerName);
 
-                RestoreManagedDirectory(
-                    nativeDirectory,
-                    backupNativeDirectory,
-                    NativeMarkerName);
+                if (nativeSwapStarted)
+                    RestoreManagedDirectory(nativeDirectory, backupNativeDirectory, NativeMarkerName);
 
                 if (uiSwapStarted)
                 {
                     RestoreManagedUi(
                         logicModsDirectory,
-                        backupUiDirectory);
+                        backupUiDirectory,
+                        uiBackedUpFiles,
+                        uiPublishedFiles);
                 }
 
                 throw;
@@ -363,6 +395,14 @@ namespace Limelight.Services
                 GetLogicModsDirectory(
                     installation);
 
+            EnsureManagedOrAbsent(
+                modDirectory,
+                RoleMarkerName,
+                "LimelightMP found an unmanaged mod folder and left it untouched.");
+            EnsureManagedOrAbsent(
+                nativeDirectory,
+                NativeMarkerName,
+                "LimelightMP found an unmanaged native folder and left it untouched.");
             EnsureManagedUiOrAbsent(
                 logicModsDirectory);
 
@@ -549,7 +589,9 @@ namespace Limelight.Services
             MultiplayerRole role,
             string connectAddress,
             int gamePort,
-            MultiplayerInstalledRole marker)
+            MultiplayerInstalledRole marker,
+            bool nativePlayerMode,
+            bool useSteam)
         {
             MultiplayerPayloadManifest manifest =
                 LoadAndValidateManifest();
@@ -574,13 +616,17 @@ namespace Limelight.Services
 
             string addressPlaceholder =
                 "local CONNECT_ADDRESS = \"127.0.0.1:7777\" -- INSTALL_CONNECT_ADDRESS";
+            const string modePlaceholder = "local NETWORK_PLAYER_MODE = \"compatibility\" -- INSTALL_NETWORK_PLAYER_MODE";
+            const string steamPlaceholder = "local STEAM_SESSION = false -- INSTALL_STEAM_SESSION";
 
             if (!script.Contains(
                     originalNameLine,
                     StringComparison.Ordinal) ||
                 !script.Contains(
                     addressPlaceholder,
-                    StringComparison.Ordinal))
+                    StringComparison.Ordinal) ||
+                !script.Contains(modePlaceholder, StringComparison.Ordinal) ||
+                !script.Contains(steamPlaceholder, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     "The embedded multiplayer script is missing its installation markers.");
@@ -595,6 +641,12 @@ namespace Limelight.Services
                     .Replace(
                         addressPlaceholder,
                         $"local CONNECT_ADDRESS = \"{connectAddress}\" -- INSTALL_CONNECT_ADDRESS",
+                        StringComparison.Ordinal)
+                    .Replace(modePlaceholder,
+                        $"local NETWORK_PLAYER_MODE = \"{(nativePlayerMode ? "native" : "compatibility")}\" -- INSTALL_NETWORK_PLAYER_MODE",
+                        StringComparison.Ordinal)
+                    .Replace(steamPlaceholder,
+                        $"local STEAM_SESSION = {(useSteam ? "true" : "false")} -- INSTALL_STEAM_SESSION",
                         StringComparison.Ordinal);
 
             if (role == MultiplayerRole.Host)
@@ -625,6 +677,11 @@ namespace Limelight.Services
             Directory.CreateDirectory(
                 scriptsDirectory);
 
+            File.WriteAllBytes(Path.Combine(scriptsDirectory, "native_ownership.lua"),
+                ReadEmbeddedBytes(manifest.NativeOwnershipScript.ResourceName));
+            File.WriteAllBytes(Path.Combine(scriptsDirectory, "steam_gate.lua"),
+                ReadEmbeddedBytes(manifest.SteamGateScript.ResourceName));
+
             File.WriteAllText(
                 Path.Combine(
                     scriptsDirectory,
@@ -644,7 +701,8 @@ namespace Limelight.Services
 
         private void CreateStagedNativeBridge(
             string stagedDirectory,
-            MultiplayerRole role)
+            MultiplayerRole role,
+            bool nativePlayerMode)
         {
             MultiplayerPayloadManifest manifest =
                 LoadAndValidateManifest();
@@ -695,6 +753,8 @@ namespace Limelight.Services
                         "client-mode.txt"),
                     string.Empty);
             }
+            if (nativePlayerMode)
+                File.WriteAllText(Path.Combine(stagedDirectory, "native-player-mode.txt"), Version);
         }
 
         private void CreateStagedUi(
@@ -738,7 +798,8 @@ namespace Limelight.Services
 
         private static void MoveManagedUiToDirectory(
             string logicModsDirectory,
-            string backupDirectory)
+            string backupDirectory,
+            ICollection<string> backedUpFiles)
         {
             string markerPath =
                 Path.Combine(
@@ -767,13 +828,15 @@ namespace Limelight.Services
                         Path.Combine(
                             backupDirectory,
                             fileName));
+                    backedUpFiles.Add(fileName);
                 }
             }
         }
 
         private static void MoveStagedUiToTarget(
             string stagedDirectory,
-            string logicModsDirectory)
+            string logicModsDirectory,
+            ICollection<string> publishedFiles)
         {
             foreach (string fileName in GetUiFileNames(includeMarker: false))
             {
@@ -785,6 +848,7 @@ namespace Limelight.Services
                         logicModsDirectory,
                         fileName),
                     overwrite: true);
+                publishedFiles.Add(fileName);
             }
 
             File.Move(
@@ -795,6 +859,7 @@ namespace Limelight.Services
                     logicModsDirectory,
                     UiMarkerName),
                 overwrite: true);
+            publishedFiles.Add(UiMarkerName);
         }
 
         private static void UpdateModsFile(
@@ -871,6 +936,9 @@ namespace Limelight.Services
 
             ValidateManifestFile(
                 manifest.ClientScript);
+
+            ValidateManifestFile(manifest.NativeOwnershipScript);
+            ValidateManifestFile(manifest.SteamGateScript);
 
             ValidateManifestFile(
                 manifest.NativeBridge);
@@ -1112,11 +1180,13 @@ namespace Limelight.Services
 
         private static void RestoreManagedUi(
             string logicModsDirectory,
-            string backupDirectory)
+            string backupDirectory,
+            IReadOnlyCollection<string> backedUpFiles,
+            IReadOnlyCollection<string> publishedFiles)
         {
             try
             {
-                foreach (string fileName in GetUiFileNames(includeMarker: true))
+                foreach (string fileName in publishedFiles)
                 {
                     string targetPath =
                         Path.Combine(
@@ -1134,7 +1204,7 @@ namespace Limelight.Services
                     return;
                 }
 
-                foreach (string fileName in GetUiFileNames(includeMarker: true))
+                foreach (string fileName in backedUpFiles)
                 {
                     string backupPath =
                         Path.Combine(
