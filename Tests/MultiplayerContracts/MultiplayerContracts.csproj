@@ -9,5 +9,8 @@
     <Compile Include="..\..\Models\MultiplayerModels.cs" Link="MultiplayerModels.cs" />
     <Compile Include="..\..\Services\LimelightMpTransportPolicy.cs" Link="LimelightMpTransportPolicy.cs" />
     <Compile Include="..\..\Services\LimelightMpFriendCodeService.cs" Link="LimelightMpFriendCodeService.cs" />
+    <Compile Include="..\..\Models\MultiplayerSteamModels.cs" Link="MultiplayerSteamModels.cs" />
+    <Compile Include="..\..\Services\LimelightMpSteamContract.cs" Link="LimelightMpSteamContract.cs" />
+    <Compile Include="..\..\Services\LimelightMpSteamSessionService.cs" Link="LimelightMpSteamSessionService.cs" />
   </ItemGroup>
 </Project>

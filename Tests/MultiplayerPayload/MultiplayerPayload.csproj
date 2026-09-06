@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PayloadDirectory Condition="'$(PayloadDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\Payloads\Multiplayer</PayloadDirectory>
+    <HostScriptOverride Condition="'$(HostScriptOverride)' == ''">$(PayloadDirectory)\host.lua</HostScriptOverride>
+    <ManifestOverride Condition="'$(ManifestOverride)' == ''">$(PayloadDirectory)\multiplayer-manifest.json</ManifestOverride>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\Models\MultiplayerModels.cs" Link="MultiplayerModels.cs" />
+    <Compile Include="..\..\Services\LimelightMpPayloadService.cs" Link="LimelightMpPayloadService.cs" />
+    <Compile Include="..\..\Services\Ue4ssDetectionService.cs" Link="Ue4ssDetectionService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(HostScriptOverride)" LogicalName="Limelight.Payloads.Multiplayer.host.lua" />
+    <EmbeddedResource Include="$(PayloadDirectory)\client.lua" LogicalName="Limelight.Payloads.Multiplayer.client.lua" />
+    <EmbeddedResource Include="$(PayloadDirectory)\native_ownership.lua" LogicalName="Limelight.Payloads.Multiplayer.native_ownership.lua" />
+    <EmbeddedResource Include="$(PayloadDirectory)\steam_gate.lua" LogicalName="Limelight.Payloads.Multiplayer.steam_gate.lua" />
+    <EmbeddedResource Include="$(PayloadDirectory)\LimelightMPNative.dll" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPNative.dll" />
+    <EmbeddedResource Include="$(PayloadDirectory)\LimelightMPRelay.exe" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPRelay.exe" />
+    <EmbeddedResource Include="$(PayloadDirectory)\LimelightMPUI.pak" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPUI.pak" />
+    <EmbeddedResource Include="$(PayloadDirectory)\LimelightMPUI.utoc" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPUI.utoc" />
+    <EmbeddedResource Include="$(PayloadDirectory)\LimelightMPUI.ucas" LogicalName="Limelight.Payloads.Multiplayer.LimelightMPUI.ucas" />
+    <EmbeddedResource Include="$(ManifestOverride)" LogicalName="Limelight.Payloads.Multiplayer.multiplayer-manifest.json" />
+  </ItemGroup>
+</Project>
