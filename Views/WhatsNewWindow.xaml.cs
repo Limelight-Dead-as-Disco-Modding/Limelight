@@ -9,7 +9,7 @@ namespace Limelight.Views
     public partial class WhatsNewWindow : Window
     {
         private const string DocumentationUrl =
-            "https://henreh1.github.io/LimelightWiki/";
+            "https://limelight-dead-as-disco-modding.github.io/LimelightWiki/";
 
         public WhatsNewWindow(
             ReleaseNotesContent content)
