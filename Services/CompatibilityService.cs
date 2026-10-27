@@ -12,7 +12,7 @@ namespace Limelight.Services
             "25902913";
 
         public const string SupportedGameVersion =
-            "++brainjar+release-CL-34094;";
+            "++brainjar+release-CL-34094";
 
         public const string SupportedGameUpdateName =
             "The Halloweenie Mini Update!";
