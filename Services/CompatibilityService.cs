@@ -9,19 +9,19 @@ namespace Limelight.Services
     public sealed class CompatibilityService
     {
         public const string SupportedSteamBuildId =
-            "24599852";
+            "25902913";
 
         public const string SupportedGameVersion =
-            "++brainjar+release-CL-31326";
+            "++brainjar+release-CL-34094;"
 
         public const string SupportedGameUpdateName =
-            "The Midsummer Update Takes the Stage!";
+            "The Halloweenie Mini Update!";
 
         public const string SupportedGameUpdateReleasedLabel =
-            "3 AUGUST 2026";
+            "14 OCTOBER 2026";
 
         public const string SupportedBuildPublishedLabel =
-            "6 AUGUST 2026 · 21:30 UTC";
+            "14 OCTOBER 2026 · 16:05 UTC";
 
         public const string SupportedNativeBridgeVersion =
             "0.1.14";
